@@ -73,6 +73,27 @@ public class Board {
         return new Board(newGrid);
     }
 
+    public Board applyTransformation(Move move, boolean inverse) {
+        if (!inverse) {
+            switch (move) {
+                case LEFT -> { return this; }
+                case RIGHT -> { return this.reverseRows(); }
+                case UP -> { return this.transpose(); }
+                case DOWN -> { return this.transpose().reverseRows(); }
+            }
+        } else {
+            switch (move) {
+                case LEFT -> { return this; }
+                case RIGHT -> { return this.reverseRows(); }
+                case UP -> { return this.transpose(); }
+                case DOWN -> { return this.reverseRows().transpose(); }
+            }
+        }
+        throw new IllegalStateException("Unhandled move: " + move);
+    }
+
+
+
     public int getDimension() {
         return grid.length;
     }

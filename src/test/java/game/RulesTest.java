@@ -12,234 +12,166 @@ public class RulesTest {
 
     private final Rules rules = new BaseRules();
 
+    // 1) Left only tests
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("leftCases")
     void leftMoveCases(String name, int[][] start, int[][] expected, int expectedScore) {
-        assertMove(name, start, expected, expectedScore, Move.LEFT);
-    }
-
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("rightCases")
-    void rightMoveCases(String name, int[][] start, int[][] expected, int expectedScore) {
-        assertMove(name, start, expected, expectedScore, Move.RIGHT);
-    }
-
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("upCases")
-    void upMoveCases(String name, int[][] start, int[][] expected, int expectedScore) {
-        assertMove(name, start, expected, expectedScore, Move.UP);
-    }
-
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("downCases")
-    void downMoveCases(String name, int[][] start, int[][] expected, int expectedScore) {
-        assertMove(name, start, expected, expectedScore, Move.DOWN);
-    }
-
-    private void assertMove(String name, int[][] start, int[][] expected, int expectedScore, Move move) {
-        MoveResult r = rules.makeMove(new Board(start), move);
+        MoveResult r = rules.makeMove(new Board(start), Move.LEFT);
 
         assertThat(r.board().getGrid())
-                .as("board after " + move + " — " + name)
+                .as("board after LEFT — " + name)
                 .isDeepEqualTo(new Board(expected).getGrid());
 
         assertThat(r.scoreGained())
-                .as("score after " + move + " — " + name)
+                .as("score after LEFT — " + name)
                 .isEqualTo(expectedScore);
     }
+
+    // 2) Equivalence tests under rotation and transposition
+    @ParameterizedTest(name = "equivalence {1} matches transformed LEFT — {0}")
+    @MethodSource("equivalenceCases")
+    void otherMovesAreEquivalentToTransformedLeft(String name, Move move, int[][] start) {
+        Board b = new Board(start);
+
+        // actual result from engine
+        MoveResult actual = rules.makeMove(b, move);
+
+        // expected via: transform -> LEFT -> inverse transform
+        Board transformed = b.applyTransformation(move, false);
+        MoveResult leftOnTransformed = rules.makeMove(transformed, Move.LEFT);
+        Board expectedBoard = leftOnTransformed.board().applyTransformation(move, true);
+        int expectedScore = leftOnTransformed.scoreGained();
+
+        assertThat(actual.board().getGrid())
+                .as("board equivalence for " + move + " — " + name)
+                .isDeepEqualTo(expectedBoard.getGrid());
+
+        assertThat(actual.scoreGained())
+                .as("score equivalence for " + move + " — " + name)
+                .isEqualTo(expectedScore);
+    }
+
+    // ----------- LEFT semantic cases (add annoying ones here) -----------
 
     static Stream<Arguments> leftCases() {
         return Stream.of(
                 Arguments.of(
-                        "one element shifts",
+                        "gap merge (2,0,0,2) -> 4",
                         new int[][]{
-                                {0, 0, 2, 0},
-                                {0, 0, 2, 0},
-                                {0, 0, 2, 0},
-                                {0, 0, 2, 0}
+                                {2, 0, 0, 2},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0}
                         },
                         new int[][]{
-                                {2, 0, 0, 0},
-                                {2, 0, 0, 0},
-                                {2, 0, 0, 0},
-                                {2, 0, 0, 0}
-                        },
-                        0
-                ),
-                Arguments.of(
-                        "single merge",
-                        new int[][]{
-                                {0, 0, 2, 0},
-                                {0, 2, 2, 0},
-                                {0, 0, 2, 0},
-                                {4, 0, 2, 0}
-                        },
-                        new int[][]{
-                                {2, 0, 0, 0},
                                 {4, 0, 0, 0},
-                                {2, 0, 0, 0},
-                                {4, 2, 0, 0}
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0}
                         },
                         4
                 ),
                 Arguments.of(
-                        "double merge row",
+                        "three in a row merges once (2,2,2,0) -> (4,2,0,0)",
                         new int[][]{
-                                {2, 2, 2, 2},
-                                {0, 2, 2, 0},
-                                {0, 0, 2, 0},
-                                {4, 0, 2, 0}
+                                {2, 2, 2, 0},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0}
                         },
                         new int[][]{
-                                {4, 4, 0, 0},
-                                {4, 0, 0, 0},
-                                {2, 0, 0, 0},
-                                {4, 2, 0, 0}
+                                {4, 2, 0, 0},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0}
+                        },
+                        4
+                ),
+                Arguments.of(
+                        "two merges in one row (2,2,4,4) -> (4,8,0,0)",
+                        new int[][]{
+                                {2, 2, 4, 4},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0}
+                        },
+                        new int[][]{
+                                {4, 8, 0, 0},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0}
                         },
                         12
-                )
-        );
-    }
-
-    static Stream<Arguments> rightCases() {
-        return Stream.of(
-                Arguments.of(
-                        "one element shifts right",
-                        new int[][]{
-                                {0, 2, 0, 0},
-                                {0, 0, 0, 4},
-                                {8, 0, 0, 0},
-                                {0, 0, 16, 0}
-                        },
-                        new int[][]{
-                                {0, 0, 0, 2},
-                                {0, 0, 0, 4},
-                                {0, 0, 0, 8},
-                                {0, 0, 0, 16}
-                        },
-                        0
                 ),
                 Arguments.of(
-                        "single merge to the right",
+                        "merged tile cannot merge again (4,4,4,0) -> (8,4,0,0)",
                         new int[][]{
-                                {2, 0, 2, 0},
-                                {0, 4, 0, 4},
-                                {0, 0, 0, 0},
-                                {2, 2, 0, 0}
-                        },
-                        new int[][]{
-                                {0, 0, 0, 4},
-                                {0, 0, 0, 8},
-                                {0, 0, 0, 0},
-                                {0, 0, 0, 4}
-                        },
-                        16
-                )
-        );
-    }
-
-    static Stream<Arguments> upCases() {
-        return Stream.of(
-                Arguments.of(
-                        "vertical shift up",
-                        new int[][]{
-                                {0, 0, 0, 0},
-                                {2, 0, 0, 0},
-                                {0, 4, 0, 0},
-                                {0, 0, 8, 0}
-                        },
-                        new int[][]{
-                                {2, 4, 8, 0},
+                                {4, 4, 4, 0},
                                 {0, 0, 0, 0},
                                 {0, 0, 0, 0},
                                 {0, 0, 0, 0}
                         },
-                        0
-                ),
-                Arguments.of(
-                        "single vertical merge up",
                         new int[][]{
-                                {0, 2, 0, 0},
-                                {0, 2, 0, 0},
+                                {8, 4, 0, 0},
                                 {0, 0, 0, 0},
-                                {0, 0, 0, 0}
-                        },
-                        new int[][]{
-                                {0, 4, 0, 0},
-                                {0, 0, 0, 0},
-                                {0, 0, 0, 0},
-                                {0, 0, 0, 0}
-                        },
-                        4
-                ),
-                Arguments.of(
-                        "double vertical merge in one column (2,2,2,2)",
-                        new int[][]{
-                                {2, 0, 0, 0},
-                                {2, 0, 0, 0},
-                                {2, 0, 0, 0},
-                                {2, 0, 0, 0}
-                        },
-                        new int[][]{
-                                {4, 0, 0, 0},
-                                {4, 0, 0, 0},
                                 {0, 0, 0, 0},
                                 {0, 0, 0, 0}
                         },
                         8
+                ),
+                Arguments.of(
+                        "no-op left (already packed, no merges)",
+                        new int[][]{
+                                {2, 4, 8, 16},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0}
+                        },
+                        new int[][]{
+                                {2, 4, 8, 16},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0},
+                                {0, 0, 0, 0}
+                        },
+                        0
                 )
         );
     }
 
-    static Stream<Arguments> downCases() {
+    // ----------- Equivalence test boards (only a few, but messy) -----------
+
+    static Stream<Arguments> equivalenceCases() {
         return Stream.of(
                 Arguments.of(
-                        "vertical shift down",
+                        "messy board with gaps + merges",
+                        Move.RIGHT,
                         new int[][]{
-                                {2, 4, 8, 0},
-                                {0, 0, 0, 0},
-                                {0, 0, 0, 0},
-                                {0, 0, 0, 0}
-                        },
-                        new int[][]{
-                                {0, 0, 0, 0},
-                                {0, 0, 0, 0},
-                                {0, 0, 0, 0},
-                                {2, 4, 8, 0}
-                        },
-                        0
+                                {2, 0, 2, 4},
+                                {0, 4, 4, 0},
+                                {2, 2, 0, 2},
+                                {0, 8, 0, 8}
+                        }
                 ),
                 Arguments.of(
-                        "single vertical merge down",
+                        "messy board with vertical patterns",
+                        Move.UP,
                         new int[][]{
-                                {0, 0, 0, 0},
-                                {0, 2, 0, 0},
-                                {0, 2, 0, 0},
-                                {0, 0, 0, 0}
-                        },
-                        new int[][]{
-                                {0, 0, 0, 0},
-                                {0, 0, 0, 0},
-                                {0, 0, 0, 0},
-                                {0, 4, 0, 0}
-                        },
-                        4
+                                {2, 2, 0, 0},
+                                {2, 0, 2, 0},
+                                {0, 2, 2, 2},
+                                {2, 0, 0, 2}
+                        }
                 ),
                 Arguments.of(
-                        "two independent merges down in a column (2,2,4,4)",
+                        "messy board with packed row + merge row",
+                        Move.DOWN,
                         new int[][]{
-                                {2, 0, 0, 0},
-                                {2, 0, 0, 0},
-                                {4, 0, 0, 0},
-                                {4, 0, 0, 0}
-                        },
-                        new int[][]{
+                                {2, 4, 8, 16},
                                 {0, 0, 0, 0},
-                                {0, 0, 0, 0},
-                                {4, 0, 0, 0},
-                                {8, 0, 0, 0}
-                        },
-                        12
+                                {2, 2, 4, 4},
+                                {4, 0, 4, 0}
+                        }
                 )
         );
     }
