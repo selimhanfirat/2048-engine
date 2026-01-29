@@ -21,12 +21,13 @@ public class BaseRules implements Rules {
         }
 
         // depending on the move type we either/or reverse, transpose the array so that any move is equivalent to a left move
-        if (move.equals(Move.UP)) {
-            board = board.reverseRows().transpose();
-        } else if (move.equals(Move.DOWN)) {
-            board = board.transpose();
-        } else if (move.equals(Move.RIGHT)) {
-            board = board.reverseRows();
+        switch (move) {
+            case LEFT -> {
+                // no-op
+            }
+            case RIGHT -> board = board.reverseRows();
+            case UP -> board = board.transpose();
+            case DOWN -> board = board.transpose().reverseRows();
         }
 
         int n = board.getDimension();
@@ -67,13 +68,15 @@ public class BaseRules implements Rules {
 
 
         // finally we revert back the array
-        if (move.equals(Move.UP)) {
-            newBoard = newBoard.transpose().reverseRows(); // reverse reversing rows and transposing
-        } else if (move.equals(Move.DOWN)) {
-            newBoard = newBoard.transpose(); // reverse transposing
-        } else if (move.equals(Move.RIGHT)) {
-            newBoard = newBoard.reverseRows(); // reverse reversing rows
+        switch (move) {
+            case LEFT -> {
+                // no-op
+            }
+            case RIGHT -> newBoard = newBoard.reverseRows();
+            case UP -> newBoard = newBoard.transpose();
+            case DOWN -> newBoard = newBoard.reverseRows().transpose();
         }
+
 
         return new MoveResult(newBoard, scoreGained);
 

@@ -7,6 +7,5 @@ So far, we can make moves and add up our scores.
 In the near future, simple greedy heuristic based decision 
 making system will be added to decide the optimal move at a particular board state.
 
-
 The tutorial for the game can be found here.
 https://en.wikipedia.org/wiki/2048_(video_game)
