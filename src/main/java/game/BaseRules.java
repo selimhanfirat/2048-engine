@@ -20,7 +20,6 @@ public class BaseRules implements Rules {
             throw new IllegalArgumentException("Move Not Possible");
         }
 
-
         // depending on the move type we either/or reverse, transpose the array so that any move is equivalent to a left move
         if (move.equals(Move.UP)) {
             board = board.reverseRows().transpose();
@@ -42,28 +41,38 @@ public class BaseRules implements Rules {
             Tile[] src = board.getGrid()[i];
             Tile[] dst = newBoard.getGrid()[i];
 
-            // track the leftmost index where we can move our tile
             int movableIndex = 0;
 
-            if (src[0].getValue() > 0) movableIndex = 1;
-
-            // we loop over each tile in the column
             for (int j = 0; j < n; j++) {
-
-                // if we find a nonempty tile
                 if (src[j].getValue() > 0) {
 
-                    // but it is mergeable
-                    if (src[movableIndex].getValue() == src[j].getValue()) {
-                        src[movableIndex] = src[j].merge(src[movableIndex]); // merge it
-                        scoreGained += src[movableIndex].getValue(); // get the score gained value
-                    } else {
-                        src[movableIndex] = src[j]; // put the value into the empty tile
+                    // if target slot is empty, just place
+                    if (dst[movableIndex].getValue() == 0) {
+                        dst[movableIndex] = src[j];
                     }
-                    src[j] = new Tile(0); // empty the old tile regardless we merge or not
-                    movableIndex = j; // set the moveable index so that we know the next empty spot
+                    // if mergeable, merge into dst
+                    else if (dst[movableIndex].getValue() == src[j].getValue()) {
+                        dst[movableIndex] = src[j].merge(dst[movableIndex]);
+                        scoreGained += dst[movableIndex].getValue();
+                        movableIndex++; // move past merged tile
+                    }
+                    // otherwise move to next slot
+                    else {
+                        movableIndex++;
+                        dst[movableIndex] = src[j];
+                    }
                 }
             }
+        }
+
+
+        // finally we revert back the array
+        if (move.equals(Move.UP)) {
+            newBoard = newBoard.transpose().reverseRows(); // reverse reversing rows and transposing
+        } else if (move.equals(Move.DOWN)) {
+            newBoard = newBoard.transpose(); // reverse transposing
+        } else if (move.equals(Move.RIGHT)) {
+            newBoard = newBoard.reverseRows(); // reverse reversing rows
         }
 
         return new MoveResult(newBoard, scoreGained);

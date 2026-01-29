@@ -1,1 +1,96 @@
-package game;import java.util.Arrays;public class Board {    private Tile[][] grid;    private double bitMask;    private int dimension;    public Board() {        new Board(4);    }    public Board(int n) {        grid = new Tile[n][n];        bitMask = 0;        this.dimension = n;    }    public Board(Tile[][] grid) {        this.grid = grid;    }    public Board(int[][] grid) {        this.grid = new Tile[grid.length][grid[0].length];        for (int i = 0; i < grid.length; i++) {            for (int j = 0; j < grid[0].length; j++) {                this.grid[i][j] = new Tile(grid[i][j]);            }        }    }    @Override    public boolean equals(Object other) {        if (other instanceof Board otherBoard) {            for (int i = 0; i < this.dimension; i++) {                for (int j = 0; j < this.dimension; j++) {                    if (!grid[i][j].equals(otherBoard.grid[i][j])) {                        return false;                    }                }            }            return true;        } else {            return false;        }    }    @Override    public int hashCode() {        return Arrays.deepHashCode(grid);    }    public Board transpose() {        Tile[][] newGrid = new Tile[this.dimension][this.dimension];        for (int i = 0; i < this.dimension; i++) {            for (int j = 0; j < this.dimension; j++) {                newGrid[j][i] = this.grid[i][j];            }        }        return new Board(newGrid);    }    public Board reverseRows() {        Tile[][] newGrid = new Tile[this.dimension][this.dimension];        for (int i = 0; i < this.dimension; i++) {            for (int j = 0; j < this.dimension; j++) {                newGrid[i][j] = this.grid[i][this.dimension - j - 1];            }        }        return new Board(newGrid);    }    public int getDimension() {        return dimension;    }    public void setDimension(int dimension) {        this.dimension = dimension;    }    public double getBitMask() {        return bitMask;    }    public void setBitMask(double bitMask) {        this.bitMask = bitMask;    }    public Tile[][] getGrid() {        return grid;    }    public void setGrid(Tile[][] grid) {        this.grid = grid;    }}
+package game;
+
+import java.util.Arrays;
+
+public class Board {
+
+    private Tile[][] grid;
+    private double bitMask;
+
+    public Board() {
+        this(4);
+    }
+
+    public Board(int n) {
+        this(new int[n][n]);
+    }
+
+    public Board(Tile[][] grid) {
+        this.grid = grid;
+    }
+
+    public Board(int[][] grid) {
+        Tile[][] newGrid = new Tile[grid.length][grid[0].length];
+        for (int i = 0; i < grid.length; i++) {
+            for (int j = 0; j < grid[0].length; j++) {
+                newGrid[i][j] = new Tile(grid[i][j]);
+            }
+        }
+        this.grid = newGrid;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (other instanceof Board otherBoard) {
+            if (this.getDimension() != otherBoard.getDimension()) {
+                return false;
+            }
+            for (int i = 0; i < this.getDimension(); i++) {
+                for (int j = 0; j < this.getDimension(); j++) {
+                    if (!grid[i][j].equals(otherBoard.grid[i][j])) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.deepHashCode(grid);
+    }
+
+    public Board transpose() {
+        Tile[][] newGrid = new Tile[this.getDimension()][this.getDimension()];
+        for (int i = 0; i < this.getDimension(); i++) {
+            for (int j = 0; j < this.getDimension(); j++) {
+                newGrid[j][i] = this.grid[i][j];
+            }
+        }
+        return new Board(newGrid);
+    }
+
+    public Board reverseRows() {
+        Tile[][] newGrid = new Tile[this.getDimension()][this.getDimension()];
+        for (int i = 0; i < this.getDimension(); i++) {
+            for (int j = 0; j < this.getDimension(); j++) {
+                newGrid[i][j] = this.grid[i][this.getDimension() - j - 1];
+            }
+        }
+        return new Board(newGrid);
+    }
+
+    public int getDimension() {
+        return grid.length;
+    }
+
+    public double getBitMask() {
+        return bitMask;
+    }
+
+    public void setBitMask(double bitMask) {
+        this.bitMask = bitMask;
+    }
+
+    public Tile[][] getGrid() {
+        return grid;
+    }
+
+    public void setGrid(Tile[][] grid) {
+        this.grid = grid;
+    }
+
+}

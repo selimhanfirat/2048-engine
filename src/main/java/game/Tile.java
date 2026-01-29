@@ -27,4 +27,17 @@ public class Tile {
     public int getValue() {
         return this.value;
     }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Tile tile)) return false;
+
+        return getValue() == tile.getValue();
+    }
+
+    @Override
+    public int hashCode() {
+        return getValue();
+    }
 }
