@@ -59,43 +59,36 @@ public class BaseRules implements Rules {
         board = board.applyTransformation(move);
         int n = board.getDimension();
 
-        // create a new board so we are immutable
-        Board newBoard = new Board(n);
 
         int scoreGained = 0;
-
+        int[][] grid = board.getGrid();
+        int[][] newGrid = new int[n][n];
         // every row is independent, we loop over each of them.
         for (int i = 0; i < n; i++) {
-            Tile[] src = board.getGrid()[i];
-            Tile[] dst = newBoard.getGrid()[i];
-
             int movableIndex = 0;
-
             for (int j = 0; j < n; j++) {
-                if (!src[j].isEmpty()) {
+                if (grid[i][j] == 0) {
 
                     // if target slot is empty, just place
-                    if (dst[movableIndex].isEmpty()) {
-                        dst[movableIndex] = src[j];
+                    if (newGrid[i][movableIndex] == 0) {
+                        newGrid[i][movableIndex] = grid[i][j];
                     }
                     // if mergeable, merge into dst
-                    else if (dst[movableIndex].value() == src[j].value()) {
-                        dst[movableIndex] = src[j].merge(dst[movableIndex]);
-                        scoreGained += dst[movableIndex].value();
+                    else if (newGrid[i][j] == grid[i][j]) {
+                        newGrid[i][movableIndex] = grid[i][j] * 2;
+                        scoreGained += newGrid[i][movableIndex];
                         movableIndex++; // move past merged tile
                     }
                     // otherwise move to next slot
                     else {
                         movableIndex++;
-                        dst[movableIndex] = src[j];
+                        newGrid[i][movableIndex] = grid[i][j];
                     }
                 }
             }
         }
 
-        newBoard = newBoard.applyTransformation(move, true);
-
-
+        Board newBoard = new Board(newGrid).applyTransformation(move, true);
         return new MoveResult(newBoard, scoreGained);
 
     }

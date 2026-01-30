@@ -4,7 +4,9 @@ import java.util.Arrays;
 
 public class Board {
 
-    private Tile[][] grid;
+    private final Tile[][] grid;
+    private final int[][] intGrid;
+    int n;
     private double bitMask;
 
     public Board() {
@@ -15,10 +17,6 @@ public class Board {
         this(new int[n][n]);
     }
 
-    public Board(Tile[][] grid) {
-        this.grid = grid;
-    }
-
     public Board(int[][] grid) {
         Tile[][] newGrid = new Tile[grid.length][grid[0].length];
         for (int i = 0; i < grid.length; i++) {
@@ -26,17 +24,19 @@ public class Board {
                 newGrid[i][j] = new Tile(grid[i][j]);
             }
         }
+        this.n = grid.length;
+        this.intGrid = grid;
         this.grid = newGrid;
     }
 
     @Override
     public boolean equals(Object other) {
         if (other instanceof Board otherBoard) {
-            if (this.getDimension() != otherBoard.getDimension()) {
+            if (this.n != otherBoard.n) {
                 return false;
             }
-            for (int i = 0; i < this.getDimension(); i++) {
-                for (int j = 0; j < this.getDimension(); j++) {
+            for (int i = 0; i < this.n; i++) {
+                for (int j = 0; j < this.n; j++) {
                     if (!grid[i][j].equals(otherBoard.grid[i][j])) {
                         return false;
                     }
@@ -54,20 +54,20 @@ public class Board {
     }
 
     public Board transpose() {
-        Tile[][] newGrid = new Tile[this.getDimension()][this.getDimension()];
-        for (int i = 0; i < this.getDimension(); i++) {
-            for (int j = 0; j < this.getDimension(); j++) {
-                newGrid[j][i] = this.grid[i][j];
+        int[][] newGrid = new int[this.n][this.n];
+        for (int i = 0; i < this.n; i++) {
+            for (int j = 0; j < this.n; j++) {
+                newGrid[j][i] = this.intGrid[j][i];
             }
         }
         return new Board(newGrid);
     }
 
     public Board reverseRows() {
-        Tile[][] newGrid = new Tile[this.getDimension()][this.getDimension()];
-        for (int i = 0; i < this.getDimension(); i++) {
-            for (int j = 0; j < this.getDimension(); j++) {
-                newGrid[i][j] = this.grid[i][this.getDimension() - j - 1];
+        int[][] newGrid = new int[this.n][this.n];
+        for (int i = 0; i < this.n; i++) {
+            for (int j = 0; j < this.n; j++) {
+                newGrid[i][j] = this.intGrid[i][this.n - j - 1];
             }
         }
         return new Board(newGrid);
@@ -97,23 +97,17 @@ public class Board {
 
 
     public int getDimension() {
-        return grid.length;
+        return this.n;
     }
 
     public double getBitMask() {
         return bitMask;
     }
 
-    public void setBitMask(double bitMask) {
-        this.bitMask = bitMask;
-    }
 
-    public Tile[][] getGrid() {
-        return grid;
+    public int[][] getGrid() {
+        return this.intGrid;
     }
-
-    public void setGrid(Tile[][] grid) {
-        this.grid = grid;
-    }
+    
 
 }

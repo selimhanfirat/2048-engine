@@ -30,4 +30,8 @@ public record Tile(int value) {
     public int hashCode() {
         return value();
     }
+
+    public Tile getCopy() {
+        return new Tile(value);
+    }
 }
