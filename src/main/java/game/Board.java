@@ -104,9 +104,12 @@ public class Board {
         return bitMask;
     }
 
-
     public int[][] getGrid() {
-        return this.intGrid;
+        int[][] newGrid = new int[this.n][this.n];
+        for (int i = 0; i < this.n; i++) {
+            System.arraycopy(this.intGrid[i], 0, newGrid[i], 0, this.n);
+        }
+        return newGrid;
     }
     
 

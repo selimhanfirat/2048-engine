@@ -24,8 +24,9 @@ public class BaseRules implements Rules {
         or there exists a merge
         we return early when we see a merge, or when we see a nonzero value after we see a zero value
          */
+        int[][] grid = board.getGrid();
         for (int i = 0; i < board.getDimension(); i++) {
-            Tile[] row = board.getGrid()[i];
+            int[] row = board.getGrid()[i];
             boolean mergingExists = false; // flag if we can merge any two tiles at any row
 
             int lastMergingValue = 0; // value of the last nonZero tile we saw so we can merge
@@ -33,14 +34,14 @@ public class BaseRules implements Rules {
             boolean containsFillableZero = false;
 
             for (int j = 0; j < board.getDimension(); j++) {
-                Tile tile = row[j];
-                if (tile.isEmpty()) {
+                int value = row[j];
+                if (value == 0) {
                     sawZero = true;
-                } else if (tile.value() == lastMergingValue) {
+                } else if (value == lastMergingValue) {
                     mergingExists = true;
                     containsFillableZero = sawZero;
                 } else {
-                    lastMergingValue = tile.value();
+                    lastMergingValue = value;
                 }
 
                 if (containsFillableZero || mergingExists) {
@@ -67,15 +68,16 @@ public class BaseRules implements Rules {
         for (int i = 0; i < n; i++) {
             int movableIndex = 0;
             for (int j = 0; j < n; j++) {
-                if (grid[i][j] == 0) {
+                if (grid[i][j] != 0) {
 
                     // if target slot is empty, just place
                     if (newGrid[i][movableIndex] == 0) {
                         newGrid[i][movableIndex] = grid[i][j];
                     }
                     // if mergeable, merge into dst
-                    else if (newGrid[i][j] == grid[i][j]) {
+                    else if (newGrid[i][movableIndex] == grid[i][j]) {
                         newGrid[i][movableIndex] = grid[i][j] * 2;
+                        grid[i][j] = 0;
                         scoreGained += newGrid[i][movableIndex];
                         movableIndex++; // move past merged tile
                     }
