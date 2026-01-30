@@ -1,6 +1,6 @@
 package game;
 
-import java.util.Arrays;
+import java.util.*;
 
 public class Board {
 
@@ -110,6 +110,18 @@ public class Board {
             System.arraycopy(this.intGrid[i], 0, newGrid[i], 0, this.n);
         }
         return newGrid;
+    }
+
+    public int[] getEmptyCells() {
+        List<Integer> emptyCells = new ArrayList<Integer>();
+        for (int i = 0; i < this.n; i++) {
+            for (int j = 0; j < this.n; j++) {
+                if (this.intGrid[i][j] == 0) {
+                    emptyCells.add(i * n + 1);
+                }
+            }
+        }
+        return emptyCells.stream().mapToInt(i -> i).toArray();
     }
     
 
