@@ -1,17 +1,18 @@
-package game;
+package game.rules;
 
-public class BaseRules implements Rules {
+import game.core.Board;
+import game.core.Move;
+import game.core.MoveResult;
 
-    public BaseRules() {}
+import java.util.EnumSet;
+
+public class ClassicRules2048 implements Rules {
+
+    public ClassicRules2048() {}
 
     // given a board, detect if game over
     public boolean isGameOver(Board board) {
-        for (Move move : Move.values()) {
-            if (!this.makeMove(board, move).board().equals(board)){
-                return false;
-            }
-        }
-        return true;
+        return getLegalMoves(board).isEmpty();
     }
 
     // make a move and return the new board
@@ -52,6 +53,17 @@ public class BaseRules implements Rules {
 
         Board newBoard = new Board(newGrid).applyInverseTransformation(move);
         return new MoveResult(newBoard, scoreGained);
+    }
+
+    @Override
+    public EnumSet<Move> getLegalMoves(Board board) {
+        EnumSet<Move> legalMoves = EnumSet.noneOf(Move.class);
+        for (Move move : Move.values()) {
+            if (!this.makeMove(board, move).board().equals(board)){
+                legalMoves.add(move);
+            }
+        }
+        return legalMoves;
     }
 
 }

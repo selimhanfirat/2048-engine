@@ -1,4 +1,4 @@
-package game;
+package game.core;
 
 public enum Move {
     LEFT(1),

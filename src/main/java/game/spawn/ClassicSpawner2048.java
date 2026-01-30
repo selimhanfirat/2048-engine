@@ -1,18 +1,20 @@
-package game;
+package game.spawn;
+
+import game.core.Board;
+import game.core.SpawnDecision;
 
 import java.util.Random;
-import java.util.Set;
 
-public class BaseSpawner implements Spawner {
+public class ClassicSpawner2048 implements Spawner {
 
-    double p;
+    private final double p;
 
-    public BaseSpawner(double p) {
+    public ClassicSpawner2048(double p) {
         this.p = p;
     }
 
     @Override
-    public SpawnDecision pickRandomTile(Board board, Random random) {
+    public SpawnDecision pickTile(Board board, Random random) {
         int[] emptyCells = board.getEmptyCells();
         int count = emptyCells.length;
 

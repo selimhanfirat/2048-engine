@@ -1,6 +1,6 @@
-package game.ui;
+package ui;
 
-import game.Board;
+import game.core.Board;
 
 public final class BoardRenderer {
 
