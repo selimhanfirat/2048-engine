@@ -91,6 +91,9 @@ public class Board {
         }
         throw new IllegalStateException("Unhandled move: " + move);
     }
+    public Board applyTransformation(Move move) {
+        return applyTransformation(move, false);
+    }
 
 
 

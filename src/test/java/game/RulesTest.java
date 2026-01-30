@@ -52,8 +52,7 @@ public class RulesTest {
                 .isEqualTo(expectedScore);
     }
 
-    // ----------- LEFT semantic cases (add annoying ones here) -----------
-
+    // ----------- LEFT semantic cases (annoying ones here) -----------
     static Stream<Arguments> leftCases() {
         return Stream.of(
                 Arguments.of(
