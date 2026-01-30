@@ -3,6 +3,7 @@ package game;
 import game.ui.BoardRenderer;
 
 import java.util.Random;
+import java.util.Scanner;
 
 public class Game {
 
@@ -11,6 +12,7 @@ public class Game {
     Board board;
     int score;
     Random random;
+    private final Scanner input = new Scanner(System.in);
 
     public Game(Rules rules, Spawner spawner, Board board, Random random) {
         this.rules = rules;
@@ -36,17 +38,15 @@ public class Game {
             board = board.placeTile(decision);
 
             System.out.println(BoardRenderer.pretty(board));
-            sleep(250);
+            waitForEnter();
         }
     }
 
-    private static void sleep(long ms) {
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+    private void waitForEnter() {
+        System.out.print("Press Enter to continue...");
+        input.nextLine();
     }
+
 
 
 
