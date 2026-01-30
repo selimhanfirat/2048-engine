@@ -100,9 +100,6 @@ public class Board {
         return this.n;
     }
 
-    public double getBitMask() {
-        return bitMask;
-    }
 
     public int[][] getGrid() {
         int[][] newGrid = new int[this.n][this.n];
@@ -117,11 +114,21 @@ public class Board {
         for (int i = 0; i < this.n; i++) {
             for (int j = 0; j < this.n; j++) {
                 if (this.intGrid[i][j] == 0) {
-                    emptyCells.add(i * n + 1);
+                    emptyCells.add(i * n + j);
                 }
             }
         }
         return emptyCells.stream().mapToInt(i -> i).toArray();
+    }
+
+    public Board addTile(SpawnDecision decision) {
+        int[][] newGrid = this.getGrid();
+        int i = decision.x();
+        int j = decision.y();
+        int value = decision.value();
+
+        newGrid[i][j] = value;
+        return new Board(newGrid);
     }
     
 
