@@ -96,7 +96,6 @@ public class Board {
     }
 
 
-
     public int getDimension() {
         return grid.length;
     }

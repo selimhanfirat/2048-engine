@@ -1,12 +1,6 @@
 package game;
 
-public class Tile {
-
-    private final int value;
-
-    public Tile(int value) {
-        this.value = value;
-    }
+public record Tile(int value) {
 
     public boolean canMerge(Tile other) {
         if (this.value == 0 || other.value == 0) return false;
@@ -24,20 +18,16 @@ public class Tile {
         return value == 0;
     }
 
-    public int getValue() {
-        return this.value;
-    }
-
     @Override
     public final boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Tile tile)) return false;
 
-        return getValue() == tile.getValue();
+        return value() == tile.value();
     }
 
     @Override
     public int hashCode() {
-        return getValue();
+        return value();
     }
 }

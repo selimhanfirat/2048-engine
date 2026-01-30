@@ -18,12 +18,11 @@ public class BaseRules implements Rules {
     public boolean isMovePossible(Board board, Move move) {
         board = board.applyTransformation(move); // transform the board according to the board
 
-        // [2, 0, 0, 2]
-
         /*
         A move is only possible if there exists a row in which where
         there exists a zero that is to the left of a nonzero tile
         or there exists a merge
+        we return early when we see a merge, or when we see a nonzero value after we see a zero value
          */
         for (int i = 0; i < board.getDimension(); i++) {
             Tile[] row = board.getGrid()[i];
@@ -37,12 +36,13 @@ public class BaseRules implements Rules {
                 Tile tile = row[j];
                 if (tile.isEmpty()) {
                     sawZero = true;
-                } else if (tile.getValue() == lastMergingValue) {
+                } else if (tile.value() == lastMergingValue) {
                     mergingExists = true;
                     containsFillableZero = sawZero;
                 } else {
-                    lastMergingValue = tile.getValue();
+                    lastMergingValue = tile.value();
                 }
+
                 if (containsFillableZero || mergingExists) {
                     return true;
                 }
@@ -79,9 +79,9 @@ public class BaseRules implements Rules {
                         dst[movableIndex] = src[j];
                     }
                     // if mergeable, merge into dst
-                    else if (dst[movableIndex].getValue() == src[j].getValue()) {
+                    else if (dst[movableIndex].value() == src[j].value()) {
                         dst[movableIndex] = src[j].merge(dst[movableIndex]);
-                        scoreGained += dst[movableIndex].getValue();
+                        scoreGained += dst[movableIndex].value();
                         movableIndex++; // move past merged tile
                     }
                     // otherwise move to next slot
