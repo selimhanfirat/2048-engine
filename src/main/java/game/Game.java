@@ -22,17 +22,18 @@ public class Game {
 
     public void gameLoop() {
         SpawnDecision decision = spawner.pickRandomTile(board, random);
-        board = board.addTile(decision);
+        board = board.placeTile(decision);
 
         System.out.println(BoardRenderer.pretty(board));
 
-        while(rules.isGameOver(board)) {
+        while(!rules.isGameOver(board)) {
             Move move = Move.random();
+            System.out.println(move);
             MoveResult result = rules.makeMove(board, move);
             score += result.scoreGained();
             board = result.board();
             decision = spawner.pickRandomTile(board, random);
-            board = board.addTile(decision);
+            board = board.placeTile(decision);
 
             System.out.println(BoardRenderer.pretty(board));
             sleep(250);

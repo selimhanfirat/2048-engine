@@ -1,51 +1,104 @@
 package game;
 
-import java.util.*;
+import java.util.Arrays;
 
-public class Board {
+public final class Board {
 
-    private final Tile[][] grid;
-    private final int[][] intGrid;
-    int n;
-    private double bitMask;
+    private final int[][] grid;
+    private final int n;
 
     public Board() {
         this(4);
     }
 
-    public Board(int n) {
-        this(new int[n][n]);
+    public Board(int dimension) {
+        this.n = dimension;
+        this.grid = new int[dimension][dimension];
     }
 
     public Board(int[][] grid) {
-        Tile[][] newGrid = new Tile[grid.length][grid[0].length];
-        for (int i = 0; i < grid.length; i++) {
-            for (int j = 0; j < grid[0].length; j++) {
-                newGrid[i][j] = new Tile(grid[i][j]);
+        this.n = grid.length;
+        this.grid = copyGrid(grid);
+    }
+
+    public int getDimension() {
+        return n;
+    }
+
+    public int[][] getGrid() {
+        return copyGrid(grid);
+    }
+
+    public int[] getEmptyCells() {
+        int count = 0;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                if (grid[i][j] == 0) count++;
             }
         }
-        this.n = grid.length;
-        this.intGrid = grid;
-        this.grid = newGrid;
+
+        int[] emptyCells = new int[count];
+        int index = 0;
+
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                if (grid[i][j] == 0) {
+                    emptyCells[index++] = i * n + j;
+                }
+            }
+        }
+        return emptyCells;
+    }
+
+    public Board placeTile(SpawnDecision decision) {
+        int[][] newGrid = copyGrid(grid);
+        newGrid[decision.x()][decision.y()] = decision.value();
+        return new Board(newGrid);
+    }
+
+    public Board transpose() {
+        int[][] result = new int[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                result[j][i] = grid[i][j];
+            }
+        }
+        return new Board(result);
+    }
+
+    public Board reverseRows() {
+        int[][] result = new int[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                result[i][j] = grid[i][n - j - 1];
+            }
+        }
+        return new Board(result);
+    }
+
+    public Board applyTransformation(Move move) {
+        return switch (move) {
+            case LEFT -> this;
+            case RIGHT -> reverseRows();
+            case UP -> transpose();
+            case DOWN -> transpose().reverseRows();
+        };
+    }
+
+    public Board applyInverseTransformation(Move move) {
+        return switch (move) {
+            case LEFT -> this;
+            case RIGHT -> reverseRows();
+            case UP -> transpose();
+            case DOWN -> reverseRows().transpose();
+        };
     }
 
     @Override
     public boolean equals(Object other) {
-        if (other instanceof Board otherBoard) {
-            if (this.n != otherBoard.n) {
-                return false;
-            }
-            for (int i = 0; i < this.n; i++) {
-                for (int j = 0; j < this.n; j++) {
-                    if (!grid[i][j].equals(otherBoard.grid[i][j])) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        } else {
-            return false;
-        }
+        if (this == other) return true;
+        if (!(other instanceof Board board)) return false;
+        return Arrays.deepEquals(this.grid, board.grid);
     }
 
     @Override
@@ -53,83 +106,11 @@ public class Board {
         return Arrays.deepHashCode(grid);
     }
 
-    public Board transpose() {
-        int[][] newGrid = new int[this.n][this.n];
-        for (int i = 0; i < this.n; i++) {
-            for (int j = 0; j < this.n; j++) {
-                newGrid[j][i] = this.intGrid[j][i];
-            }
+    private int[][] copyGrid(int[][] source) {
+        int[][] result = new int[source.length][source.length];
+        for (int i = 0; i < source.length; i++) {
+            System.arraycopy(source[i], 0, result[i], 0, source.length);
         }
-        return new Board(newGrid);
+        return result;
     }
-
-    public Board reverseRows() {
-        int[][] newGrid = new int[this.n][this.n];
-        for (int i = 0; i < this.n; i++) {
-            for (int j = 0; j < this.n; j++) {
-                newGrid[i][j] = this.intGrid[i][this.n - j - 1];
-            }
-        }
-        return new Board(newGrid);
-    }
-
-    public Board applyTransformation(Move move, boolean inverse) {
-        if (!inverse) {
-            switch (move) {
-                case LEFT -> { return this; }
-                case RIGHT -> { return this.reverseRows(); }
-                case UP -> { return this.transpose(); }
-                case DOWN -> { return this.transpose().reverseRows(); }
-            }
-        } else {
-            switch (move) {
-                case LEFT -> { return this; }
-                case RIGHT -> { return this.reverseRows(); }
-                case UP -> { return this.transpose(); }
-                case DOWN -> { return this.reverseRows().transpose(); }
-            }
-        }
-        throw new IllegalStateException("Unhandled move: " + move);
-    }
-    public Board applyTransformation(Move move) {
-        return applyTransformation(move, false);
-    }
-
-
-    public int getDimension() {
-        return this.n;
-    }
-
-
-    public int[][] getGrid() {
-        int[][] newGrid = new int[this.n][this.n];
-        for (int i = 0; i < this.n; i++) {
-            System.arraycopy(this.intGrid[i], 0, newGrid[i], 0, this.n);
-        }
-        return newGrid;
-    }
-
-    public int[] getEmptyCells() {
-        List<Integer> emptyCells = new ArrayList<Integer>();
-        for (int i = 0; i < this.n; i++) {
-            for (int j = 0; j < this.n; j++) {
-                if (this.intGrid[i][j] == 0) {
-                    emptyCells.add(i * n + j);
-                }
-            }
-        }
-        return emptyCells.stream().mapToInt(i -> i).toArray();
-    }
-
-    public Board addTile(SpawnDecision decision) {
-        int[][] newGrid = this.getGrid();
-        int i = decision.x();
-        int j = decision.y();
-        int value = decision.value();
-
-        newGrid[i][j] = value;
-        return new Board(newGrid);
-    }
-    
-
 }

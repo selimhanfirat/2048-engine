@@ -13,7 +13,6 @@ public class Main {
 
         Rules rules = new BaseRules();          // assuming default ctor
         Spawner spawner = new BaseSpawner(0.9);    // assuming default ctor
-        System.out.println(BoardRenderer.pretty(board));
 
         Game game = new Game(
                 rules,
