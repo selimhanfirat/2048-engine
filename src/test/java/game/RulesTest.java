@@ -1,5 +1,10 @@
 package game;
 
+import game.core.Board;
+import game.core.Move;
+import game.core.MoveResult;
+import game.rules.ClassicRules2048;
+import game.rules.Rules;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -11,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class RulesTest {
 
-    private final Rules rules = new BaseRules();
+    private final Rules rules = new ClassicRules2048();
 
     // -------- LEFT move semantics --------
 

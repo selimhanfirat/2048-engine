@@ -1,5 +1,8 @@
 package game;
 
+import game.core.Board;
+import game.core.Move;
+import game.core.SpawnDecision;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;
