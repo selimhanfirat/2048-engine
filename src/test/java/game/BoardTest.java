@@ -9,151 +9,313 @@ import static org.assertj.core.api.Assertions.*;
 
 class BoardTest {
 
+    // ---------- constructors / invariants ----------
+
     @Test
     void defaultConstructor_creates4x4AllZeros() {
         Board b = new Board();
-        assertThat(b.getDimension()).isEqualTo(4);
+        assertThat(b.getDimension()).as("dimension").isEqualTo(4);
 
         int[][] g = b.getGrid();
-        assertThat(g.length).isEqualTo(4);
-        assertThat(g[0].length).isEqualTo(4);
-
+        assertThat(g).hasDimensions(4, 4);
         for (int i = 0; i < 4; i++) {
+            assertThat(g[i]).as("row " + i).hasSize(4);
             for (int j = 0; j < 4; j++) {
-                assertThat(g[i][j]).isZero();
+                assertThat(g[i][j]).as("cell (" + i + "," + j + ")").isZero();
             }
         }
     }
 
     @Test
-    void constructor_copiesInputArray() {
-        int[][] src = {
-                {1, 0},
-                {0, 2}
-        };
-        Board b = new Board(src);
+    void dimensionConstructor_createsNxNAllZeros() {
+        Board b = new Board(3);
 
-        src[0][0] = 999; // mutate original after construction
-        assertThat(b.getGrid()[0][0]).isEqualTo(1);
+        assertThat(b.getDimension()).as("dimension").isEqualTo(3);
+        assertThat(b.getGrid())
+                .as("grid")
+                .isDeepEqualTo(new int[][]{
+                        {0, 0, 0},
+                        {0, 0, 0},
+                        {0, 0, 0}
+                });
     }
 
     @Test
-    void getGrid_returnsDefensiveCopy() {
+    void dimensionConstructor_rejectsNonPositiveDimension() {
+        assertThatThrownBy(() -> new Board(0))
+                .as("dimension 0 should be rejected")
+                .isInstanceOf(IllegalArgumentException.class); // current impl: new int[0][0] is OK, but Board(0) creates 0x0; adapt if you later enforce >0
+
+        assertThatThrownBy(() -> new Board(-1))
+                .as("negative dimension should be rejected")
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void gridConstructor_copiesInputArray_deepCopy() {
         int[][] src = {
                 {1, 0},
                 {0, 2}
         };
         Board b = new Board(src);
+
+        src[0][0] = 999;
+        src[1][1] = 888;
+
+        assertThat(b.getGrid())
+                .as("mutating source must not affect board")
+                .isDeepEqualTo(new int[][]{
+                        {1, 0},
+                        {0, 2}
+                });
+    }
+
+    @Test
+    void getGrid_returnsDefensiveCopy_everyCallIndependent() {
+        Board b = new Board(new int[][]{
+                {1, 0},
+                {0, 2}
+        });
 
         int[][] g1 = b.getGrid();
-        g1[0][0] = 999; // mutate returned grid
+        int[][] g2 = b.getGrid();
 
-        assertThat(b.getGrid()[0][0]).isEqualTo(1);
+        g1[0][0] = 999;
+
+        assertThat(g2[0][0])
+                .as("each getGrid call returns independent copy")
+                .isEqualTo(1);
+
+        assertThat(b.getGrid()[0][0])
+                .as("board internal state unchanged")
+                .isEqualTo(1);
     }
 
     @Test
-    void constructor_rejectsNonSquareGrid() {
+    void gridConstructor_rejectsNonSquareGrid_messageContainsNonSquare() {
         int[][] nonSquare = {
                 {1, 2, 3},
                 {4, 5, 6}
         };
 
         assertThatThrownBy(() -> new Board(nonSquare))
+                .as("non-square grid must be rejected")
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("square");
+                .hasMessageContaining("Non-square");
     }
+
+    @Test
+    void gridConstructor_rejectsJaggedGrid_messageContainsNonSquare() {
+        int[][] jagged = {
+                {1, 2},
+                {3}
+        };
+
+        assertThatThrownBy(() -> new Board(jagged))
+                .as("jagged grid must be rejected")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Non-square");
+    }
+
+    // ---------- empty cells ----------
 
     @Test
     void getEmptyCells_returnsAllZeroPositionsRowMajor() {
-        int[][] src = {
+        Board b = new Board(new int[][]{
                 {1, 0, 3},
                 {0, 0, 6},
                 {7, 8, 0}
-        };
-        Board b = new Board(src);
+        });
 
-        assertThat(b.getEmptyCells()).containsExactly(1, 3, 4, 8);
+        assertThat(b.getEmptyCells())
+                .as("row-major indices for zeros")
+                .containsExactly(1, 3, 4, 8);
     }
 
     @Test
-    void placeTile_returnsNewBoard_andDoesNotMutateOriginal() {
-        int[][] src = {
+    void getEmptyCells_emptyWhenNoZeros() {
+        Board b = new Board(new int[][]{
+                {1, 2},
+                {3, 4}
+        });
+
+        assertThat(b.getEmptyCells())
+                .as("no zeros => empty list")
+                .isEmpty();
+    }
+
+    @Test
+    void getEmptyCells_allCellsWhenAllZeros() {
+        Board b = new Board(new int[][]{
+                {0, 0},
+                {0, 0}
+        });
+
+        assertThat(b.getEmptyCells())
+                .as("all zeros => all indices")
+                .containsExactly(0, 1, 2, 3);
+    }
+
+    // ---------- placeTile ----------
+
+    @Test
+    void placeTile_returnsNewBoard_originalUnchanged_andOnlyOneCellChanged() {
+        Board b = new Board(new int[][]{
                 {0, 0, 0},
                 {0, 0, 0},
                 {0, 0, 0}
-        };
-        Board b = new Board(src);
+        });
 
         Board b2 = b.placeTile(new SpawnDecision(1, 0, 4));
 
-        assertThat(b.getGrid()[1][0]).as("original unchanged").isZero();
-        assertThat(b2.getGrid()[1][0]).as("new board has tile").isEqualTo(4);
-        assertThat(b2).isNotEqualTo(b);
+        assertThat(b).as("original board unchanged")
+                .isEqualTo(new Board(new int[][]{
+                        {0, 0, 0},
+                        {0, 0, 0},
+                        {0, 0, 0}
+                }));
+
+        assertThat(b2.getGrid())
+                .as("new board contains placed tile only")
+                .isDeepEqualTo(new int[][]{
+                        {0, 0, 0},
+                        {4, 0, 0},
+                        {0, 0, 0}
+                });
+
+        assertThat(b2).as("must be new contents").isNotEqualTo(b);
     }
 
     @Test
-    void transpose_works() {
-        int[][] src = {
-                {1, 2, 3},
-                {4, 5, 6},
-                {7, 8, 9}
-        };
-        Board b = new Board(src);
+    void placeTile_overwritesExistingValue() {
+        Board b = new Board(new int[][]{
+                {2, 0},
+                {0, 0}
+        });
 
-        int[][] expected = {
-                {1, 4, 7},
-                {2, 5, 8},
-                {3, 6, 9}
-        };
+        Board b2 = b.placeTile(new SpawnDecision(0, 0, 4));
 
-        assertThat(b.transpose().getGrid()).isDeepEqualTo(expected);
+        assertThat(b2.getGrid()[0][0])
+                .as("overwrite existing")
+                .isEqualTo(4);
+
+        assertThat(b.getGrid()[0][0])
+                .as("original unchanged")
+                .isEqualTo(2);
     }
 
     @Test
-    void reverseRows_works() {
-        int[][] src = {
+    void placeTile_throwsOnOutOfBounds() {
+        Board b = new Board(2);
+
+        assertThatThrownBy(() -> b.placeTile(new SpawnDecision(2, 0, 2)))
+                .as("x out of bounds")
+                .isInstanceOf(ArrayIndexOutOfBoundsException.class);
+
+        assertThatThrownBy(() -> b.placeTile(new SpawnDecision(0, 2, 2)))
+                .as("y out of bounds")
+                .isInstanceOf(ArrayIndexOutOfBoundsException.class);
+    }
+
+    // ---------- transpose / reverseRows ----------
+
+    @Test
+    void transpose_isInvolution_transposeTwiceEqualsOriginal() {
+        Board b = new Board(new int[][]{
                 {1, 2, 3},
                 {4, 5, 6},
                 {7, 8, 9}
-        };
-        Board b = new Board(src);
+        });
 
-        int[][] expected = {
-                {3, 2, 1},
-                {6, 5, 4},
-                {9, 8, 7}
-        };
-
-        assertThat(b.reverseRows().getGrid()).isDeepEqualTo(expected);
+        assertThat(b.transpose().transpose())
+                .as("transpose twice should return original")
+                .isEqualTo(b);
     }
+
+    @Test
+    void reverseRows_isInvolution_reverseTwiceEqualsOriginal() {
+        Board b = new Board(new int[][]{
+                {1, 2, 3},
+                {4, 5, 6},
+                {7, 8, 9}
+        });
+
+        assertThat(b.reverseRows().reverseRows())
+                .as("reverseRows twice should return original")
+                .isEqualTo(b);
+    }
+
+    @Test
+    void transpose_worksOnNonTrivialGrid() {
+        Board b = new Board(new int[][]{
+                {1, 2, 3},
+                {4, 5, 6},
+                {7, 8, 9}
+        });
+
+        assertThat(b.transpose().getGrid())
+                .as("transpose result")
+                .isDeepEqualTo(new int[][]{
+                        {1, 4, 7},
+                        {2, 5, 8},
+                        {3, 6, 9}
+                });
+    }
+
+    @Test
+    void reverseRows_worksOnNonTrivialGrid() {
+        Board b = new Board(new int[][]{
+                {1, 2, 3},
+                {4, 5, 6},
+                {7, 8, 9}
+        });
+
+        assertThat(b.reverseRows().getGrid())
+                .as("reverseRows result")
+                .isDeepEqualTo(new int[][]{
+                        {3, 2, 1},
+                        {6, 5, 4},
+                        {9, 8, 7}
+                });
+    }
+
+    // ---------- transformations ----------
 
     @Test
     void applyTransformation_matchesDefinitions() {
-        int[][] src = {
+        Board b = new Board(new int[][]{
                 {1, 2},
                 {3, 4}
-        };
-        Board b = new Board(src);
+        });
 
-        assertThat(b.applyTransformation(Move.LEFT)).isEqualTo(b);
-        assertThat(b.applyTransformation(Move.RIGHT)).isEqualTo(b.reverseRows());
-        assertThat(b.applyTransformation(Move.UP)).isEqualTo(b.transpose());
-        assertThat(b.applyTransformation(Move.DOWN)).isEqualTo(b.transpose().reverseRows());
+        assertThat(b.applyTransformation(Move.LEFT))
+                .as("LEFT transform")
+                .isEqualTo(b);
+
+        assertThat(b.applyTransformation(Move.RIGHT))
+                .as("RIGHT transform")
+                .isEqualTo(b.reverseRows());
+
+        assertThat(b.applyTransformation(Move.UP))
+                .as("UP transform")
+                .isEqualTo(b.transpose());
+
+        assertThat(b.applyTransformation(Move.DOWN))
+                .as("DOWN transform")
+                .isEqualTo(b.transpose().reverseRows());
     }
 
     @Test
     void applyInverseTransformation_undoesTransformation_forAllMoves() {
-        int[][] src = {
+        Board b = new Board(new int[][]{
                 {0, 2, 0, 4},
                 {8, 0, 0, 0},
                 {0, 0, 16, 0},
                 {0, 32, 0, 64}
-        };
-        Board b = new Board(src);
+        });
 
         for (Move m : Move.values()) {
-            Board transformed = b.applyTransformation(m);
-            Board back = transformed.applyInverseTransformation(m);
+            Board back = b.applyTransformation(m).applyInverseTransformation(m);
 
             assertThat(back)
                     .as("inverse should undo transform for %s", m)
@@ -162,22 +324,84 @@ class BoardTest {
     }
 
     @Test
-    void equalsAndHashCode_workForSameContents() {
-        int[][] a = {
-                {1, 0, 2},
-                {0, 4, 0},
-                {8, 0, 16}
-        };
-        int[][] b = {
-                {1, 0, 2},
-                {0, 4, 0},
-                {8, 0, 16}
-        };
+    void transformationAndInverse_arePure_doNotMutateOriginal() {
+        Board b = new Board(new int[][]{
+                {1, 2, 3, 4},
+                {5, 6, 7, 8},
+                {9, 10, 11, 12},
+                {13, 14, 15, 16}
+        });
 
-        Board x = new Board(a);
-        Board y = new Board(b);
+        int[][] before = b.getGrid();
+
+        for (Move m : Move.values()) {
+            b.applyTransformation(m);
+            b.applyInverseTransformation(m);
+
+            assertThat(b.getGrid())
+                    .as("board must remain unchanged after transform calls (%s)", m)
+                    .isDeepEqualTo(before);
+        }
+    }
+
+    // ---------- equals / hashCode ----------
+
+    @Test
+    void equals_isReflexiveSymmetricTransitive_andHandlesNullAndOtherTypes() {
+        Board x = new Board(new int[][]{
+                {1, 0, 2},
+                {0, 4, 0},
+                {8, 0, 16}
+        });
+        Board y = new Board(new int[][]{
+                {1, 0, 2},
+                {0, 4, 0},
+                {8, 0, 16}
+        });
+        Board z = new Board(new int[][]{
+                {1, 0, 2},
+                {0, 4, 0},
+                {8, 0, 16}
+        });
+
+        assertThat(x).as("reflexive").isEqualTo(x);
+        assertThat(x).as("symmetric").isEqualTo(y);
+        assertThat(y).as("symmetric").isEqualTo(x);
+
+        assertThat(x).as("transitive").isEqualTo(y);
+        assertThat(y).as("transitive").isEqualTo(z);
+        assertThat(x).as("transitive").isEqualTo(z);
+
+        assertThat(x.equals(null)).as("null").isFalse();
+        assertThat(x.equals("not a board")).as("other type").isFalse();
+    }
+
+    @Test
+    void hashCode_equalBoardsHaveEqualHashCodes() {
+        Board x = new Board(new int[][]{
+                {1, 2},
+                {3, 4}
+        });
+        Board y = new Board(new int[][]{
+                {1, 2},
+                {3, 4}
+        });
 
         assertThat(x).isEqualTo(y);
         assertThat(x.hashCode()).isEqualTo(y.hashCode());
+    }
+
+    @Test
+    void equals_detectsDifferentContents() {
+        Board x = new Board(new int[][]{
+                {1, 2},
+                {3, 4}
+        });
+        Board y = new Board(new int[][]{
+                {1, 2},
+                {3, 5}
+        });
+
+        assertThat(x).as("different contents").isNotEqualTo(y);
     }
 }

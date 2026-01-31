@@ -9,7 +9,6 @@ import java.util.EnumSet;
 public class DumbGreedyPlayer implements Player {
 
     Rules rules;
-
     public DumbGreedyPlayer(Rules rules) {
         this.rules = rules;
     }

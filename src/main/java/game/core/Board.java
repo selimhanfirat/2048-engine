@@ -12,11 +12,26 @@ public final class Board {
     }
 
     public Board(int dimension) {
-        this(new int[dimension][dimension]);
+        if (dimension <= 0) {
+            throw new IllegalArgumentException("Dimension must be positive");
+        }
+        this.n = dimension;
+        this.grid = new int[dimension][dimension];
     }
 
     public Board(int[][] grid) {
-        this.n = grid.length;
+        if (grid == null || grid.length <= 0) {
+            throw new IllegalArgumentException("cannot have a 0x0 array");
+        }
+
+        int size = grid.length;
+        for (int i = 0; i < size; i++) {
+            if (grid[i] == null || grid[i].length != size) {
+                throw new IllegalArgumentException("Non-square grid");
+            }
+        }
+
+        this.n = size;
         this.grid = copyGrid(grid);
     }
 
@@ -107,11 +122,7 @@ public final class Board {
 
     private int[][] copyGrid(int[][] source) {
         int[][] result = new int[source.length][source.length];
-        int n = source.length;
         for (int i = 0; i < source.length; i++) {
-            if (n != source[i].length) {
-                throw new IllegalArgumentException("Non-square grid");
-            }
             System.arraycopy(source[i], 0, result[i], 0, source.length);
         }
         return result;
