@@ -1,6 +1,6 @@
 package app;
 
-import game.runtime.Game;
+import game.core.Game;
 
 // experiment runner, will be given a player, and a preset, it will run an experiment, reporting its stats
 public class ExperimentRunner {

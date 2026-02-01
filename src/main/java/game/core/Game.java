@@ -1,8 +1,6 @@
-package game.runtime;
+package game.core;
 
-import game.core.Board;
-import game.core.Move;
-import game.core.MoveResult;
+import game.runtime.GameConfig;
 
 import java.util.Random;
 
@@ -21,6 +19,10 @@ public final class Game {
         this.score = 0;
     }
 
+    public GameConfig getConfig() {
+        return config;
+    }
+
     public void initialize() {
         state = config.spawner().spawn(state, random);
         state = config.spawner().spawn(state, random);
@@ -32,6 +34,10 @@ public final class Game {
         score += result.scoreGained();
 
         state = config.spawner().spawn(state, random);
+    }
+
+    public Board getState() {
+        return state;
     }
 
     public boolean isGameOver() {

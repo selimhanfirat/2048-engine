@@ -82,6 +82,16 @@ public final class Board {
         return new Board(result);
     }
 
+    public int getMaxTile() {
+        int maxTile = 0;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                maxTile = Math.max(maxTile, grid[i][j]);
+            }
+        }
+        return maxTile;
+    }
+
     public Board reverseRows() {
         int[][] result = new int[n][n];
         for (int i = 0; i < n; i++) {
