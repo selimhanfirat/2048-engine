@@ -1,7 +1,7 @@
 package game.spawn;
 
 import game.core.Board;
-import game.core.SpawnDecision;
+import game.util.Coordinate;
 
 import java.util.Random;
 
@@ -14,7 +14,7 @@ public class ClassicSpawner2048 implements Spawner {
     }
 
     @Override
-    public SpawnDecision pickTile(Board board, Random random) {
+    public Board spawn(Board board, Random random) {
         int[] emptyCells = board.getEmptyCells();
         int count = emptyCells.length;
 
@@ -30,7 +30,7 @@ public class ClassicSpawner2048 implements Spawner {
         int row = cell / dim;
         int col = cell % dim;
 
-        return new SpawnDecision(row, col, value);
+        return board.placeTile(new Coordinate(row, col), value);
     }
 
 }

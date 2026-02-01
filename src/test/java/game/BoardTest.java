@@ -2,7 +2,7 @@ package game;
 
 import game.core.Board;
 import game.core.Move;
-import game.core.SpawnDecision;
+import game.util.Coordinate;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.*;
@@ -44,11 +44,13 @@ class BoardTest {
     void dimensionConstructor_rejectsNonPositiveDimension() {
         assertThatThrownBy(() -> new Board(0))
                 .as("dimension 0 should be rejected")
-                .isInstanceOf(IllegalArgumentException.class); // current impl: new int[0][0] is OK, but Board(0) creates 0x0; adapt if you later enforce >0
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Dimension");
 
         assertThatThrownBy(() -> new Board(-1))
                 .as("negative dimension should be rejected")
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Dimension");
     }
 
     @Test
@@ -90,6 +92,19 @@ class BoardTest {
                 .as("board internal state unchanged")
                 .isEqualTo(1);
     }
+
+    @Test
+    void gridConstructor_rejectsNullOr0x0Grid_messageContains0x0() {
+        //noinspection DataFlowIssue
+        assertThatThrownBy(() -> new Board(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("0x0");
+
+        assertThatThrownBy(() -> new Board(new int[][]{}))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("0x0");
+    }
+
 
     @Test
     void gridConstructor_rejectsNonSquareGrid_messageContainsNonSquare() {
@@ -166,7 +181,7 @@ class BoardTest {
                 {0, 0, 0}
         });
 
-        Board b2 = b.placeTile(new SpawnDecision(1, 0, 4));
+        Board b2 = b.placeTile(new Coordinate(1, 0), 4);
 
         assertThat(b).as("original board unchanged")
                 .isEqualTo(new Board(new int[][]{
@@ -193,7 +208,7 @@ class BoardTest {
                 {0, 0}
         });
 
-        Board b2 = b.placeTile(new SpawnDecision(0, 0, 4));
+        Board b2 = b.placeTile(new Coordinate(0, 0), 4);
 
         assertThat(b2.getGrid()[0][0])
                 .as("overwrite existing")
@@ -208,12 +223,12 @@ class BoardTest {
     void placeTile_throwsOnOutOfBounds() {
         Board b = new Board(2);
 
-        assertThatThrownBy(() -> b.placeTile(new SpawnDecision(2, 0, 2)))
-                .as("x out of bounds")
+        assertThatThrownBy(() -> b.placeTile(new Coordinate(2, 0), 2))
+                .as("row out of bounds")
                 .isInstanceOf(ArrayIndexOutOfBoundsException.class);
 
-        assertThatThrownBy(() -> b.placeTile(new SpawnDecision(0, 2, 2)))
-                .as("y out of bounds")
+        assertThatThrownBy(() -> b.placeTile(new Coordinate(0, 2), 2))
+                .as("col out of bounds")
                 .isInstanceOf(ArrayIndexOutOfBoundsException.class);
     }
 
@@ -290,7 +305,7 @@ class BoardTest {
 
         assertThat(b.applyTransformation(Move.LEFT))
                 .as("LEFT transform")
-                .isEqualTo(b);
+                .isSameAs(b);
 
         assertThat(b.applyTransformation(Move.RIGHT))
                 .as("RIGHT transform")

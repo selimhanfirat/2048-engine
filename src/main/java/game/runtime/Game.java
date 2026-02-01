@@ -3,47 +3,42 @@ package game.runtime;
 import game.core.Board;
 import game.core.Move;
 import game.core.MoveResult;
-import game.core.SpawnDecision;
-import player.Player;
-import ui.BoardRenderer;
 
-public class Game {
+import java.util.Random;
+
+public final class Game {
 
     private final GameConfig config;
-    private final Player player;
+    private final Random random;
 
-    private Board board;
+    private Board state;
     private int score;
 
-    public Game(GameConfig config, Player player) {
+    public Game(GameConfig config) {
         this.config = config;
-        this.player = player;
-        this.board = new Board(config.gridSize());
+        this.random = new Random(config.seed());
+        this.state = new Board(config.gridSize());
         this.score = 0;
     }
 
-    public void gameLoop() {
-        spawn(); // initial spawn
-
-        System.out.println(BoardRenderer.pretty(board));
-
-        while (!config.rules().isGameOver(board)) {
-            Move move = player.chooseMove(board, config.rules().getLegalMoves(board));
-            System.out.println(move);
-
-            MoveResult result = config.rules().makeMove(board, move);
-            board = result.board();
-            score += result.scoreGained();
-
-            spawn();
-            System.out.println(BoardRenderer.pretty(board));
-        }
-        System.out.println("THE GAME IS OVER AND YOUR SCORE IS " + score);
+    public void initialize() {
+        state = config.spawner().spawn(state, random);
+        state = config.spawner().spawn(state, random);
     }
 
-    private void spawn() {
-        SpawnDecision decision =
-                config.spawner().pickTile(board, config.random());
-        board = board.placeTile(decision);
+    public void step(Move move) {
+        MoveResult result = config.rules().makeMove(state, move);
+        state = result.board();
+        score += result.scoreGained();
+
+        state = config.spawner().spawn(state, random);
+    }
+
+    public boolean isGameOver() {
+        return config.rules().isGameOver(state);
+    }
+
+    public int getScore() {
+        return score;
     }
 }

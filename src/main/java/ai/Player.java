@@ -1,4 +1,4 @@
-package player;
+package ai;
 
 import game.core.Board;
 import game.core.Move;

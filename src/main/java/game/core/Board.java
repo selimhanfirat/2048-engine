@@ -1,5 +1,7 @@
 package game.core;
 
+import game.util.Coordinate;
+
 import java.util.Arrays;
 
 public final class Board {
@@ -64,9 +66,9 @@ public final class Board {
         return emptyCells;
     }
 
-    public Board placeTile(SpawnDecision decision) {
+    public Board placeTile(Coordinate coordinate, int value) {
         int[][] newGrid = copyGrid(grid);
-        newGrid[decision.x()][decision.y()] = decision.value();
+        newGrid[coordinate.x()][coordinate.y()] = value;
         return new Board(newGrid);
     }
 
