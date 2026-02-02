@@ -16,31 +16,32 @@ public final class ExperimentRunner {
     private final GameConfig config;
     private final int runs;
     private final long baseSeed;
-    private final Function<Rules, Player> playerFactory;
+    private final Player player;
 
     public ExperimentRunner(
             GameConfig config,
             int runs,
             long baseSeed,
-            Function<Rules, Player> playerFactory
+            Player player
     ) {
         this.config = config;
         this.runs = runs;
         this.baseSeed = baseSeed;
-        this.playerFactory = playerFactory;
+        this.player = player;
     }
 
     public List<SessionResult> run() {
         List<SessionResult> results = new ArrayList<>(runs);
 
+        int count = 0;
         for (int i = 0; i < runs; i++) {
             long seed = baseSeed + i;
 
             Game game = new Game(config, seed);
-            Player player = playerFactory.apply(config.rules());
 
             GameSession session = new GameSession(game, player);
             results.add(session.runGame());
+            System.out.println("Run " + ++count + " of " + runs + " is complete");
         }
 
         return results;

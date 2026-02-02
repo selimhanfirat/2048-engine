@@ -6,7 +6,7 @@ public class ZeroCountingEvaluator implements Evaluator {
 
     @Override
     public double evaluate(Board board) {
-        return 0.0;
+        return board.getEmptyCells().length * 10.0 + Math.log(board.getMaxTile());
     }
 
 }

@@ -26,8 +26,8 @@ public final class Game {
     public long getSeed() { return seed; }
 
     public void initialize() {
-        state = config.spawner().spawn(state, rng);
-        state = config.spawner().spawn(state, rng);
+        state = config.spawner().sample(state, rng);
+        state = config.spawner().sample(state, rng);
     }
 
     public Board getState() { return state; }
@@ -41,6 +41,6 @@ public final class Game {
         MoveResult result = config.rules().makeMove(state, move);
         state = result.board();
         score += result.scoreGained();
-        state = config.spawner().spawn(state, rng);
+        state = config.spawner().sample(state, rng);
     }
 }

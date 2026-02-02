@@ -4,6 +4,7 @@ import game.rules.ClassicRules2048;
 import game.rules.Rules;
 import game.spawn.ClassicSpawner2048;
 import game.spawn.Spawner;
+import game.util.Rng;
 
 public final class Presets {
 
