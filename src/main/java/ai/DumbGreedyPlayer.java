@@ -2,22 +2,24 @@ package ai;
 
 import game.core.Board;
 import game.core.Move;
-import game.rules.Rules;
 import game.core.MoveResult;
-import java.util.EnumSet;
+import game.rules.Rules;
 
 public class DumbGreedyPlayer implements Player {
 
-    Rules rules;
+    private final Rules rules;
+
     public DumbGreedyPlayer(Rules rules) {
         this.rules = rules;
     }
 
     @Override
-    public Move chooseMove(Board board, EnumSet<Move> possibleMoves) {
-        int maxScoreGained = Integer.MIN_VALUE / 2;
+    public Move chooseMove(Board board) {
+        var possibleMoves = rules.getLegalMoves(board);
 
+        int maxScoreGained = Integer.MIN_VALUE / 2;
         Move bestMove = null;
+
         for (Move move : possibleMoves) {
             MoveResult mr = rules.makeMove(board, move);
             if (mr.scoreGained() > maxScoreGained) {
@@ -27,7 +29,5 @@ public class DumbGreedyPlayer implements Player {
         }
 
         return bestMove;
-
     }
-
 }

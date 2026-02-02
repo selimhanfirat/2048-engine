@@ -7,5 +7,5 @@ import java.util.Random;
 public interface Spawner {
 
     // given a board, this method spawns a tile in the board and returns the board.
-    public Board spawn(Board board, Random random);
+    Board spawn(Board board, Random random);
 }
