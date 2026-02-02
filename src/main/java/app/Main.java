@@ -19,15 +19,6 @@ public class Main {
 
         var results = runner.run();
 
-        // print something minimal for now
-        long sum = 0;
-        int best = Integer.MIN_VALUE;
-        for (var r : results) {
-            sum += r.finalScore();
-            best = Math.max(best, r.finalScore());
-        }
-        System.out.println("Runs: " + results.size());
-        System.out.println("Avg score: " + (sum / (double) results.size()));
-        System.out.println("Best score: " + best);
+        runner.report(results);
     }
 }
