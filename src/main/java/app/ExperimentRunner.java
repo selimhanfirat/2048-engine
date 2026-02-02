@@ -1,7 +1,7 @@
 package app;
 
 import ai.Player;
-import game.core.Game;
+import game.runtime.Game;
 import game.runtime.GameConfig;
 import game.runtime.GameSession;
 import game.runtime.SessionResult;
@@ -68,7 +68,6 @@ public final class ExperimentRunner {
             bestMaxTile = Math.max(bestMaxTile, r.maxTile());
         }
 
-        System.out.println("==== Experiment Results ====");
         System.out.println("Runs: " + n);
         System.out.printf("Average score: %.2f%n", totalScore / (double) n);
         System.out.printf("Average max tile: %.2f%n", totalMaxTile / (double) n);

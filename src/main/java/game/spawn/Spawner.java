@@ -1,11 +1,8 @@
 package game.spawn;
 
 import game.core.Board;
-
-import java.util.Random;
+import game.util.Rng;
 
 public interface Spawner {
-
-    // given a board, this method spawns a tile in the board and returns the board.
-    Board spawn(Board board, Random random);
+    Board spawn(Board board, Rng rng);
 }

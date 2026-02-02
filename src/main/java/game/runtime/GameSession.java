@@ -1,7 +1,6 @@
 package game.runtime;
 
 import ai.Player;
-import game.core.Game;
 import game.core.Move;
 
 import java.util.HashMap;

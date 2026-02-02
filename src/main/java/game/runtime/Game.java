@@ -1,14 +1,15 @@
-package game.core;
+package game.runtime;
 
-import game.runtime.GameConfig;
-
-import java.util.Random;
+import game.core.Board;
+import game.core.Move;
+import game.core.MoveResult;
+import game.util.Rng;
 
 public final class Game {
 
     private final GameConfig config;
     private final long seed;
-    private final Random random;
+    private final Rng rng;
 
     private Board state;
     private int score;
@@ -16,7 +17,7 @@ public final class Game {
     public Game(GameConfig config, long seed) {
         this.config = config;
         this.seed = seed;
-        this.random = new Random(seed);
+        this.rng = new Rng(seed);
         this.state = new Board(config.gridSize());
         this.score = 0;
     }
@@ -25,8 +26,8 @@ public final class Game {
     public long getSeed() { return seed; }
 
     public void initialize() {
-        state = config.spawner().spawn(state, random);
-        state = config.spawner().spawn(state, random);
+        state = config.spawner().spawn(state, rng);
+        state = config.spawner().spawn(state, rng);
     }
 
     public Board getState() { return state; }
@@ -40,6 +41,6 @@ public final class Game {
         MoveResult result = config.rules().makeMove(state, move);
         state = result.board();
         score += result.scoreGained();
-        state = config.spawner().spawn(state, random);
+        state = config.spawner().spawn(state, rng);
     }
 }

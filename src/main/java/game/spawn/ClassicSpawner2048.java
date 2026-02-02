@@ -2,8 +2,7 @@ package game.spawn;
 
 import game.core.Board;
 import game.util.Coordinate;
-
-import java.util.Random;
+import game.util.Rng;
 
 public class ClassicSpawner2048 implements Spawner {
 
@@ -14,7 +13,7 @@ public class ClassicSpawner2048 implements Spawner {
     }
 
     @Override
-    public Board spawn(Board board, Random random) {
+    public Board spawn(Board board, Rng rng) {
         int[] emptyCells = board.getEmptyCells();
         int count = emptyCells.length;
 
@@ -22,9 +21,8 @@ public class ClassicSpawner2048 implements Spawner {
             throw new IllegalStateException("No empty cells to spawn");
         }
 
-        int value = (random.nextDouble() < p) ? 2 : 4;
-
-        int cell = emptyCells[random.nextInt(count)];
+        int value = (rng.nextDouble() < p) ? 2 : 4;
+        int cell = emptyCells[rng.nextInt(count)];
 
         int dim = board.getDimension();
         int row = cell / dim;
@@ -32,5 +30,4 @@ public class ClassicSpawner2048 implements Spawner {
 
         return board.placeTile(new Coordinate(row, col), value);
     }
-
 }
