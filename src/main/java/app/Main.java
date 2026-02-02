@@ -1,14 +1,12 @@
 package app;
 
-import ai.DumbGreedyPlayer;
-import ai.SearchingPlayer;
-import ai.eval.ZeroCountingEvaluator;
+import ai.ExpectimaxPlayerDepth2;
+import ai.eval.EmptyCellsEvaluator;
 import game.runtime.Presets;
 
 public class Main {
     public static void main(String[] args) {
         int runs = Integer.parseInt(args[0]);     // e.g. 1000
-        runs = 20;
         long baseSeed = 42L;
 
         var config = Presets.standard2048();
@@ -17,7 +15,7 @@ public class Main {
                 config,
                 runs,
                 baseSeed,
-                new SearchingPlayer(config, new ZeroCountingEvaluator())
+                new ExpectimaxPlayerDepth2(config, new EmptyCellsEvaluator())
         );
 
         var results = runner.run();

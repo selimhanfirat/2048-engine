@@ -4,13 +4,11 @@ import ai.eval.Evaluator;
 import game.core.Board;
 import game.core.Move;
 import game.rules.Rules;
-import game.runtime.Game;
 import game.runtime.GameConfig;
-import game.runtime.Presets;
 import game.spawn.SpawnDistribution.Outcome;
 import game.spawn.Spawner;
 
-public class SearchingPlayer implements Player {
+public class ExpectimaxPlayerDepth2 implements Player {
 
     private final GameConfig config;
     private final Evaluator eval;
@@ -18,7 +16,9 @@ public class SearchingPlayer implements Player {
     private final Rules rules;
     private final Spawner spawner;
 
-    public SearchingPlayer(GameConfig config, Evaluator eval) {
+    private static final int DEPTH = 2;
+
+    public ExpectimaxPlayerDepth2(GameConfig config, Evaluator eval) {
         this.config = config;
         this.eval = eval;
         this.rules = config.rules();
@@ -33,8 +33,7 @@ public class SearchingPlayer implements Player {
         for (Move move : rules.getLegalMoves(board)) {
             Board after = rules.makeMove(board, move).board();
 
-            calls = 0;
-            double value = search(after, false, 2); // chance node next
+            double value = search(after, false, DEPTH);
 
             if (value > bestValue) {
                 bestValue = value;
@@ -44,7 +43,6 @@ public class SearchingPlayer implements Player {
         return bestMove;
     }
 
-    static long calls = 0;
 
     private double search(Board board, boolean player, int depth) {
         if (depth == 0 || rules.isGameOver(board)) {

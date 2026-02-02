@@ -2,7 +2,8 @@ package ai.eval;
 
 import game.core.Board;
 
-public class ZeroCountingEvaluator implements Evaluator {
+public class EmptyCellsEvaluator
+implements Evaluator {
 
     @Override
     public double evaluate(Board board) {
