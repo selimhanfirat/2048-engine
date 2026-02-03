@@ -51,6 +51,7 @@ public final class ExperimentRunner {
     }
 
     public void report(List<SessionResult> results) {
+        String playerType = player.getClass().getSimpleName();
         int n = results.size();
 
         long totalScore = 0;
@@ -61,6 +62,10 @@ public final class ExperimentRunner {
         int bestScore = Integer.MIN_VALUE;
         int bestMaxTile = Integer.MIN_VALUE;
 
+        long totalWallNanos = 0;
+        long totalCpuNanos = 0;
+        boolean cpuAvailableForAll = true;
+
         for (SessionResult r : results) {
             totalScore += r.finalScore();
             totalSteps += r.steps();
@@ -70,14 +75,51 @@ public final class ExperimentRunner {
 
             bestScore = Math.max(bestScore, r.finalScore());
             bestMaxTile = Math.max(bestMaxTile, r.maxTile());
+
+            totalWallNanos += r.wallTimeNanos();
+
+            if (r.cpuTimeNanos() >= 0) {
+                totalCpuNanos += r.cpuTimeNanos();
+            } else {
+                cpuAvailableForAll = false;
+            }
         }
 
-        System.out.println("Runs: " + n);
-        System.out.printf("Average score: %.2f%n", totalScore / (double) n);
-        System.out.printf("Average max tile: %.2f%n", totalMaxTile / (double) n);
-        System.out.printf("Average steps: %.2f%n", totalSteps / (double) n);
-        System.out.printf("Reached 2048 rate: %.2f%%%n", 100.0 * reached2048 / n);
-        System.out.println("Best score: " + bestScore);
-        System.out.println("Best max tile: " + bestMaxTile);
+        double avgScore = totalScore / (double) n;
+        double avgSteps = totalSteps / (double) n;
+        double avgMaxTile = totalMaxTile / (double) n;
+        double reachRate = 100.0 * reached2048 / n;
+
+        double totalWallSec = totalWallNanos / 1_000_000_000.0;
+        double avgWallSec = totalWallSec / n;
+
+        System.out.println("Experiment report");
+        System.out.println("-----------------");
+        System.out.println("Runs              : " + n);
+        System.out.println("Player            : " + playerType);
+
+        System.out.println();
+        System.out.println("Performance");
+        System.out.printf("  Average score   : %.2f%n", avgScore);
+        System.out.printf("  Best score      : %d%n", bestScore);
+        System.out.printf("  Average steps   : %.2f%n", avgSteps);
+        System.out.printf("  Average max tile: %.2f%n", avgMaxTile);
+        System.out.printf("  Best max tile   : %d%n", bestMaxTile);
+        System.out.printf("  Reached 2048    : %.2f %% (%d / %d)%n",
+                reachRate, reached2048, n);
+
+        System.out.println();
+        System.out.println("Timing (seconds)");
+        System.out.printf("  Total wall time : %.3f s%n", totalWallSec);
+        System.out.printf("  Avg wall per run  : %.6f s%n", avgWallSec);
+
+        if (cpuAvailableForAll) {
+            double totalCpuSec = totalCpuNanos / 1_000_000_000.0;
+            double avgCpuSec = totalCpuSec / n;
+            System.out.printf("  Total CPU time  : %.3f s%n", totalCpuSec);
+            System.out.printf("  Avg CPU per run   : %.6f s%n", avgCpuSec);
+        } else {
+            System.out.println("  CPU time        : unavailable");
+        }
     }
 }

@@ -18,7 +18,7 @@ public class ExpectimaxPlayerWithCache implements Player {
 
     private final Rules rules;
     private final Spawner spawner;
-    private static final int DEPTH = 2;
+    private static final int DEPTH = 3;
 
     public ExpectimaxPlayerWithCache(GameConfig config, Evaluator eval) {
         this.config = config;
