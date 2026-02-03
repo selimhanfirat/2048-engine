@@ -1,6 +1,7 @@
 package app;
 
 import ai.ExpectimaxPlayerDepth2;
+import ai.ExpectimaxPlayerWithCache;
 import ai.eval.EmptyCellsEvaluator;
 import game.runtime.Presets;
 
@@ -15,7 +16,7 @@ public class Main {
                 config,
                 runs,
                 baseSeed,
-                new ExpectimaxPlayerDepth2(config, new EmptyCellsEvaluator())
+                new ExpectimaxPlayerWithCache(config, new EmptyCellsEvaluator())
         );
 
         var results = runner.run();

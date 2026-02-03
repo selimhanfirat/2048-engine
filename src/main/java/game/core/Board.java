@@ -8,6 +8,7 @@ public final class Board {
 
     private final int[][] grid;
     private final int n;
+    private int cachedHash = 0;
 
     public Board() {
         this(4);
@@ -72,6 +73,15 @@ public final class Board {
         return new Board(newGrid);
     }
 
+    // lazy hashcode method
+    @Override
+    public int hashCode() {
+        if (cachedHash == 0) {
+            cachedHash = Arrays.deepHashCode(grid);
+        }
+        return cachedHash;
+    }
+
     public Board transpose() {
         int[][] result = new int[n][n];
         for (int i = 0; i < n; i++) {
@@ -125,11 +135,6 @@ public final class Board {
         if (this == other) return true;
         if (!(other instanceof Board board)) return false;
         return Arrays.deepEquals(this.grid, board.grid);
-    }
-
-    @Override
-    public int hashCode() {
-        return Arrays.deepHashCode(grid);
     }
 
     private int[][] copyGrid(int[][] source) {

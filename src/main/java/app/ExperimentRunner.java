@@ -33,7 +33,7 @@ public final class ExperimentRunner {
     public List<SessionResult> run() {
         List<SessionResult> results = new ArrayList<>(runs);
 
-        int count = 0;
+        int count = 1;
         for (int i = 0; i < runs; i++) {
             long seed = baseSeed + i;
 
@@ -41,7 +41,10 @@ public final class ExperimentRunner {
 
             GameSession session = new GameSession(game, player);
             results.add(session.runGame());
-            System.out.println("Run " + ++count + " of " + runs + " is complete");
+            if (count % 5 == 0) {
+                System.out.println("Run " + count + " of " + runs + " is complete");
+            }
+            count++;
         }
 
         return results;
