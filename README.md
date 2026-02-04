@@ -14,8 +14,9 @@ https://en.wikipedia.org/wiki/2048_(video_game)
 The following results are snapshots from local experiments and are not guaranteed to be optimal or reproducible across machines.
 
 2026-02-04 — Expectimax (depth 2, empty-cells + monotonicity heuristic, with caching)  
-Runs: 1,000  
-Average score: ~10,900  
-Best max tile: 2048
-Average max tile: ~800
-Reached 2048: 2.90 % (29 / 1000)
+- Runs: 1,000
+- Average score: ~10,900
+- Best max tile: 2048
+- Average max tile: ~800
+- Reached 2048: 2.90% (29 / 1000)
+
