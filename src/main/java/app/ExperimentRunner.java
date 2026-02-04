@@ -121,8 +121,5 @@ public final class ExperimentRunner {
             System.out.println("  CPU time        : unavailable");
         }
 
-        System.out.println("BOARD STATS BELOW");
-        Board.printGetGridStats();
-        Board.resetGetGridStats();
     }
 }

@@ -10,6 +10,28 @@ public class ClassicRules2048 implements Rules {
 
     public ClassicRules2048() {}
 
+    // Read board as if transformed into LEFT-space
+    private int getLeftSpace(Board board, Move move, int i, int j) {
+        int n = board.getDimension();
+        return switch (move) {
+            case LEFT  -> board.get(i, j);
+            case RIGHT -> board.get(i, n - 1 - j);
+            case UP    -> board.get(j, i);
+            case DOWN  -> board.get(n - 1 - j, i);
+        };
+    }
+
+    // Write a LEFT-space cell back into final board orientation
+    private void setFromLeftSpace(int[][] out, Move move, int i, int j, int value) {
+        int n = out.length;
+        switch (move) {
+            case LEFT -> out[i][j] = value;
+            case RIGHT -> out[i][n - 1 - j] = value;
+            case UP -> out[j][i] = value;
+            case DOWN -> out[j][n - 1 - i] = value;
+        }
+    }
+    // Rules implementation
     @Override
     public boolean isGameOver(Board board) {
         return getLegalMoves(board).isEmpty();
@@ -17,37 +39,48 @@ public class ClassicRules2048 implements Rules {
 
     @Override
     public MoveResult makeMove(Board board, Move move) {
-        // Work in "LEFT space"
-        Board t = board.applyTransformation(move);
-        int n = t.getDimension();
-
+        int n = board.getDimension();
         int scoreGained = 0;
-        int[][] newGrid = new int[n][n];
+
+        // Final board grid (already in correct orientation)
+        int[][] trustedOut = new int[n][n];
+
+        // Scratch row in LEFT-space
+        int[] rowOut = new int[n];
 
         for (int i = 0; i < n; i++) {
+            // reset scratch row
+            for (int k = 0; k < n; k++) rowOut[k] = 0;
+
             int write = 0;
             int lastMergedAt = -1;
 
             for (int j = 0; j < n; j++) {
-                int v = t.get(i, j);
+                int v = getLeftSpace(board, move, i, j);
                 if (v == 0) continue;
 
-                if (newGrid[i][write] == 0) {
-                    newGrid[i][write] = v;
-                } else if (newGrid[i][write] == v && lastMergedAt != write) {
-                    newGrid[i][write] = v * 2;
-                    scoreGained += newGrid[i][write];
+                if (rowOut[write] == 0) {
+                    rowOut[write] = v;
+                } else if (rowOut[write] == v && lastMergedAt != write) {
+                    rowOut[write] = v * 2;
+                    scoreGained += rowOut[write];
                     lastMergedAt = write;
                     write++;
                 } else {
                     write++;
-                    newGrid[i][write] = v;
+                    rowOut[write] = v;
+                }
+            }
+
+            // write LEFT-space row into final board orientation
+            for (int j = 0; j < n; j++) {
+                int v = rowOut[j];
+                if (v != 0) {
+                    setFromLeftSpace(trustedOut, move, i, j, v);
                 }
             }
         }
-
-        Board newBoard = new Board(newGrid).applyInverseTransformation(move);
-        return new MoveResult(newBoard, scoreGained);
+        return new MoveResult(Board.wrapTrustedGrid(trustedOut), scoreGained);
     }
 
     @Override
@@ -61,11 +94,9 @@ public class ClassicRules2048 implements Rules {
         return legalMoves;
     }
 
-    // Checks if applying the move would change the board, with no allocations.
     @Override
     public boolean canMove(Board board, Move move) {
-        Board t = board.applyTransformation(move);
-        int n = t.getDimension();
+        int n = board.getDimension();
 
         for (int i = 0; i < n; i++) {
             int lastNonZero = 0;
@@ -73,16 +104,12 @@ public class ClassicRules2048 implements Rules {
             int targetIndex = 0;
 
             for (int j = 0; j < n; j++) {
-                int v = t.get(i, j);
+                int v = getLeftSpace(board, move, i, j);
                 if (v == 0) continue;
 
-                // If tile is not already packed left, it can move.
                 if (j != targetIndex) return true;
-
-                // If it can merge with previous tile, it can move.
                 if (hasLast && lastNonZero == v) return true;
 
-                // Simulate placing this tile without merging
                 hasLast = true;
                 lastNonZero = v;
                 targetIndex++;

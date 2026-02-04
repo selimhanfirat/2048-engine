@@ -4,13 +4,26 @@ import game.util.Coordinate;
 
 import java.util.Arrays;
 
+/**
+ * Immutable 2D board.*
+ * Notes:
+ * - Public constructors defensively copy input grids.
+ * - wrapTrustedGrid(...) is an escape hatch for performance: it takes ownership of the provided grid.
+ */
 public final class Board {
+
+    private static long getGridCalls = 0;
 
     private final int[][] grid;
     private final int n;
-    private static long getGridCalls = 0;
+
+    // Hash is cached because Board is immutable
     private int cachedHash;
     private boolean hashComputed = false;
+
+    /* =========================
+       Constructors / Factories
+       ========================= */
 
     public Board() {
         this(4);
@@ -24,80 +37,49 @@ public final class Board {
         this.grid = new int[dimension][dimension];
     }
 
+    /**
+     * Public constructor: defensively copies the provided grid.
+     */
     public Board(int[][] grid) {
-        if (grid == null || grid.length <= 0) {
-            throw new IllegalArgumentException("cannot have a 0x0 array");
-        }
-
-        int size = grid.length;
-        for (int i = 0; i < size; i++) {
-            if (grid[i] == null || grid[i].length != size) {
-                throw new IllegalArgumentException("Non-square grid");
-            }
-        }
-
-        this.n = size;
-        this.grid = copyGrid(grid); // defensive copy (public constructor)
+        validateSquareGrid(grid);
+        this.n = grid.length;
+        this.grid = copyGrid(grid);
     }
 
-    // Internal constructor that assumes grid ownership (no defensive copy).
+    /**
+     * Performance escape hatch: takes ownership of the given grid (no defensive copy).
+     * Use ONLY when the caller guarantees the array will never be mutated again.
+     */
+    public static Board wrapTrustedGrid(int[][] trustedGrid) {
+        validateSquareGrid(trustedGrid);
+        return new Board(trustedGrid, trustedGrid.length);
+    }
+
+    /**
+     * Internal constructor: assumes grid ownership (no defensive copy).
+     */
     private Board(int[][] trustedGrid, int dimension) {
         this.n = dimension;
         this.grid = trustedGrid;
     }
 
+    /* =========================
+       Basic accessors
+       ========================= */
+
     public int getDimension() {
         return n;
     }
 
-    // Fast accessor for hot paths (evaluators/search)
+    /** Fast accessor for hot paths (evaluators/search). */
     public int get(int r, int c) {
         return grid[r][c];
     }
 
-    // Defensive copy for external callers
+    /** Defensive copy for external callers. */
     public int[][] getGrid() {
         getGridCalls++;
         return copyGrid(grid);
-    }
-
-    public int[] getEmptyCells() {
-        int count = 0;
-        for (int i = 0; i < n; i++) {
-            int[] row = grid[i];
-            for (int j = 0; j < n; j++) {
-                if (row[j] == 0) count++;
-            }
-        }
-
-        int[] emptyCells = new int[count];
-        int idx = 0;
-
-        for (int i = 0; i < n; i++) {
-            int[] row = grid[i];
-            int base = i * n;
-            for (int j = 0; j < n; j++) {
-                if (row[j] == 0) {
-                    emptyCells[idx++] = base + j;
-                }
-            }
-        }
-        return emptyCells;
-    }
-
-    public Board placeTile(Coordinate coordinate, int value) {
-        int[][] newGrid = copyGrid(grid);
-        newGrid[coordinate.x()][coordinate.y()] = value;
-        return new Board(newGrid); // keep defensive copy semantics via public ctor
-    }
-
-    @Override
-    public int hashCode() {
-        if (!hashComputed) {
-            cachedHash = Arrays.deepHashCode(grid);
-            hashComputed = true;
-        }
-        return cachedHash;
     }
 
     public int getMaxTile() {
@@ -112,79 +94,73 @@ public final class Board {
         return maxTile;
     }
 
-    public Board transpose() {
-        int[][] result = new int[n][n];
+    /**
+     * Returns empty cells as flattened indices (r * n + c).
+     */
+    public int[] getEmptyCells() {
+        int count = 0;
         for (int i = 0; i < n; i++) {
             int[] row = grid[i];
             for (int j = 0; j < n; j++) {
-                result[j][i] = row[j];
+                if (row[j] == 0) count++;
             }
         }
-        return new Board(result, n); // trusted, no extra copy
-    }
 
-    public Board reverseRows() {
-        int[][] result = new int[n][n];
+        int[] empty = new int[count];
+        int idx = 0;
+
         for (int i = 0; i < n; i++) {
             int[] row = grid[i];
-            int[] out = result[i];
+            int base = i * n;
             for (int j = 0; j < n; j++) {
-                out[j] = row[n - 1 - j];
+                if (row[j] == 0) {
+                    empty[idx++] = base + j;
+                }
             }
         }
-        return new Board(result, n); // trusted, no extra copy
+        return empty;
     }
 
-    // These transformations are now single-pass (no intermediate Board allocations).
-    public Board applyTransformation(Move move) {
-        return switch (move) {
-            case LEFT -> this;
-            case RIGHT -> reverseRows(); // already optimized
-            case UP -> transpose();      // already optimized
-            case DOWN -> transformDown();
-        };
+    public Board placeTile(Coordinate coordinate, int value) {
+        int[][] newGrid = copyGrid(grid);
+        newGrid[coordinate.x()][coordinate.y()] = value;
+        return new Board(newGrid, n);
     }
 
-    public Board applyInverseTransformation(Move move) {
-        return switch (move) {
-            case LEFT -> this;
-            case RIGHT -> reverseRows();
-            case UP -> transpose();
-            case DOWN -> inverseTransformDown();
-        };
-    }
-
-    // applyTransformation(DOWN) == transpose().reverseRows()
-    // result[i][j] = grid[n - 1 - j][i]
-    private Board transformDown() {
-        int[][] result = new int[n][n];
-        for (int i = 0; i < n; i++) {
-            int[] out = result[i];
-            for (int j = 0; j < n; j++) {
-                out[j] = grid[n - 1 - j][i];
-            }
-        }
-        return new Board(result, n);
-    }
-
-    // applyInverseTransformation(DOWN) == reverseRows().transpose()
-    // result[i][j] = grid[j][n - 1 - i]
-    private Board inverseTransformDown() {
-        int[][] result = new int[n][n];
-        for (int i = 0; i < n; i++) {
-            int[] out = result[i];
-            for (int j = 0; j < n; j++) {
-                out[j] = grid[j][n - 1 - i];
-            }
-        }
-        return new Board(result, n);
-    }
+    /* =========================
+       equals / hashCode
+       ========================= */
 
     @Override
     public boolean equals(Object other) {
         if (this == other) return true;
         if (!(other instanceof Board board)) return false;
         return Arrays.deepEquals(this.grid, board.grid);
+    }
+
+    @Override
+    public int hashCode() {
+        if (!hashComputed) {
+            cachedHash = Arrays.deepHashCode(grid);
+            hashComputed = true;
+        }
+        return cachedHash;
+    }
+
+    /* =========================
+       Helpers
+       ========================= */
+
+    private static void validateSquareGrid(int[][] grid) {
+        if (grid == null || grid.length == 0) {
+            throw new IllegalArgumentException("cannot have a 0x0 array");
+        }
+        int n = grid.length;
+        for (int i = 0; i < n; i++) {
+            if (grid[i] == null || grid[i].length != n) {
+                throw new IllegalArgumentException("Non-square grid");
+            }
+        }
     }
 
     private static int[][] copyGrid(int[][] source) {
@@ -194,13 +170,5 @@ public final class Board {
             System.arraycopy(source[i], 0, result[i], 0, n);
         }
         return result;
-    }
-
-    public static void printGetGridStats() {
-        System.out.println("Board.getGrid() calls = " + getGridCalls);
-    }
-
-    public static void resetGetGridStats() {
-        getGridCalls = 0;
     }
 }
