@@ -18,4 +18,4 @@ Runs: 1,000
 Average score: ~10,900  
 Best max tile: 2048
 Average max tile: ~800
-Reached 2048    : 2.90 % (29 / 1000)
+Reached 2048: 2.90 % (29 / 1000)
