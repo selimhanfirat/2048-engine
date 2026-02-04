@@ -1,6 +1,7 @@
 package game.spawn;
 
 import game.core.Board;
+
 import java.util.List;
 
 public record SpawnDistribution(List<Outcome> outcomes) {

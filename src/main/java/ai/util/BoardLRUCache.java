@@ -1,9 +1,9 @@
-package ai;
+package ai.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-class BoardLRUCache<K, v> extends LinkedHashMap<K, v> {
+public class BoardLRUCache<K, v> extends LinkedHashMap<K, v> {
     private final int capacity;
 
     public BoardLRUCache(int capacity) {

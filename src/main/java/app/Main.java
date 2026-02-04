@@ -4,7 +4,13 @@ import ai.ExpectimaxPlayerDepth2;
 import ai.ExpectimaxPlayerWithCache;
 import ai.Player;
 import ai.eval.EmptyCellsEvaluator;
+import ai.eval.Evaluator;
+import ai.eval.MonotonicityEvaluator;
+import ai.eval.WeightedEvaluator;
+import game.runtime.GameConfig;
 import game.runtime.Presets;
+
+import java.util.List;
 
 public class Main {
 
@@ -26,19 +32,26 @@ public class Main {
 
         long baseSeed = 42L;
 
-        var config = Presets.standard2048();
-        var evaluator = new EmptyCellsEvaluator();
+        GameConfig config = Presets.standard2048();
+        Player player = getPlayer(aiType, config);
 
-        Player player = switch (aiType) {
+        ExperimentRunner runner = new ExperimentRunner(config, runs, baseSeed, player);
+        var results = runner.run();
+        runner.report(results);
+    }
+
+    private static Player getPlayer(String aiType, GameConfig config) {
+        Evaluator evaluator = new WeightedEvaluator(List.of(
+                new WeightedEvaluator.Term(new MonotonicityEvaluator(), 1.0),
+                new WeightedEvaluator.Term(new EmptyCellsEvaluator(), 1.0)
+        ));
+
+        return switch (aiType) {
             case "depth2" -> new ExpectimaxPlayerDepth2(config, evaluator);
             case "cache" -> new ExpectimaxPlayerWithCache(config, evaluator);
             default -> throw new IllegalArgumentException(
                     "Unknown AI type: " + aiType + " (expected: depth2 | cache)"
             );
         };
-
-        ExperimentRunner runner = new ExperimentRunner(config, runs, baseSeed, player);
-        var results = runner.run();
-        runner.report(results);
     }
 }

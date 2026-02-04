@@ -5,11 +5,9 @@ import game.runtime.Game;
 import game.runtime.GameConfig;
 import game.runtime.GameSession;
 import game.runtime.SessionResult;
-import game.rules.Rules;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
 public final class ExperimentRunner {
 

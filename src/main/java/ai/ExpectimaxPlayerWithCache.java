@@ -1,6 +1,7 @@
 package ai;
 
 import ai.eval.Evaluator;
+import ai.util.BoardLRUCache;
 import game.core.Board;
 import game.core.Move;
 import game.rules.Rules;
@@ -8,20 +9,15 @@ import game.runtime.GameConfig;
 import game.spawn.SpawnDistribution.Outcome;
 import game.spawn.Spawner;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-
 public class ExpectimaxPlayerWithCache implements Player {
 
-    private final GameConfig config;
     private final Evaluator eval;
 
     private final Rules rules;
     private final Spawner spawner;
-    private static final int DEPTH = 3;
+    private static final int DEPTH = 2;
 
     public ExpectimaxPlayerWithCache(GameConfig config, Evaluator eval) {
-        this.config = config;
         this.eval = eval;
         this.rules = config.rules();
         this.spawner = config.spawner();
