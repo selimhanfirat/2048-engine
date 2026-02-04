@@ -8,7 +8,9 @@ public final class Board {
 
     private final int[][] grid;
     private final int n;
-    private int cachedHash = 0;
+    private static long getGridCalls = 0;
+    private int cachedHash;
+    private boolean hashComputed = false;
 
     public Board() {
         this(4);
@@ -35,32 +37,48 @@ public final class Board {
         }
 
         this.n = size;
-        this.grid = copyGrid(grid);
+        this.grid = copyGrid(grid); // defensive copy (public constructor)
+    }
+
+    // Internal constructor that assumes grid ownership (no defensive copy).
+    private Board(int[][] trustedGrid, int dimension) {
+        this.n = dimension;
+        this.grid = trustedGrid;
     }
 
     public int getDimension() {
         return n;
     }
 
+    // Fast accessor for hot paths (evaluators/search)
+    public int get(int r, int c) {
+        return grid[r][c];
+    }
+
+    // Defensive copy for external callers
     public int[][] getGrid() {
+        getGridCalls++;
         return copyGrid(grid);
     }
 
     public int[] getEmptyCells() {
         int count = 0;
         for (int i = 0; i < n; i++) {
+            int[] row = grid[i];
             for (int j = 0; j < n; j++) {
-                if (grid[i][j] == 0) count++;
+                if (row[j] == 0) count++;
             }
         }
 
         int[] emptyCells = new int[count];
-        int index = 0;
+        int idx = 0;
 
         for (int i = 0; i < n; i++) {
+            int[] row = grid[i];
+            int base = i * n;
             for (int j = 0; j < n; j++) {
-                if (grid[i][j] == 0) {
-                    emptyCells[index++] = i * n + j;
+                if (row[j] == 0) {
+                    emptyCells[idx++] = base + j;
                 }
             }
         }
@@ -70,54 +88,60 @@ public final class Board {
     public Board placeTile(Coordinate coordinate, int value) {
         int[][] newGrid = copyGrid(grid);
         newGrid[coordinate.x()][coordinate.y()] = value;
-        return new Board(newGrid);
+        return new Board(newGrid); // keep defensive copy semantics via public ctor
     }
 
-    // lazy hashcode method
     @Override
     public int hashCode() {
-        if (cachedHash == 0) {
+        if (!hashComputed) {
             cachedHash = Arrays.deepHashCode(grid);
+            hashComputed = true;
         }
         return cachedHash;
-    }
-
-    public Board transpose() {
-        int[][] result = new int[n][n];
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                result[j][i] = grid[i][j];
-            }
-        }
-        return new Board(result);
     }
 
     public int getMaxTile() {
         int maxTile = 0;
         for (int i = 0; i < n; i++) {
+            int[] row = grid[i];
             for (int j = 0; j < n; j++) {
-                maxTile = Math.max(maxTile, grid[i][j]);
+                int v = row[j];
+                if (v > maxTile) maxTile = v;
             }
         }
         return maxTile;
     }
 
+    public Board transpose() {
+        int[][] result = new int[n][n];
+        for (int i = 0; i < n; i++) {
+            int[] row = grid[i];
+            for (int j = 0; j < n; j++) {
+                result[j][i] = row[j];
+            }
+        }
+        return new Board(result, n); // trusted, no extra copy
+    }
+
     public Board reverseRows() {
         int[][] result = new int[n][n];
         for (int i = 0; i < n; i++) {
+            int[] row = grid[i];
+            int[] out = result[i];
             for (int j = 0; j < n; j++) {
-                result[i][j] = grid[i][n - j - 1];
+                out[j] = row[n - 1 - j];
             }
         }
-        return new Board(result);
+        return new Board(result, n); // trusted, no extra copy
     }
 
+    // These transformations are now single-pass (no intermediate Board allocations).
     public Board applyTransformation(Move move) {
         return switch (move) {
             case LEFT -> this;
-            case RIGHT -> reverseRows();
-            case UP -> transpose();
-            case DOWN -> transpose().reverseRows();
+            case RIGHT -> reverseRows(); // already optimized
+            case UP -> transpose();      // already optimized
+            case DOWN -> transformDown();
         };
     }
 
@@ -126,8 +150,34 @@ public final class Board {
             case LEFT -> this;
             case RIGHT -> reverseRows();
             case UP -> transpose();
-            case DOWN -> reverseRows().transpose();
+            case DOWN -> inverseTransformDown();
         };
+    }
+
+    // applyTransformation(DOWN) == transpose().reverseRows()
+    // result[i][j] = grid[n - 1 - j][i]
+    private Board transformDown() {
+        int[][] result = new int[n][n];
+        for (int i = 0; i < n; i++) {
+            int[] out = result[i];
+            for (int j = 0; j < n; j++) {
+                out[j] = grid[n - 1 - j][i];
+            }
+        }
+        return new Board(result, n);
+    }
+
+    // applyInverseTransformation(DOWN) == reverseRows().transpose()
+    // result[i][j] = grid[j][n - 1 - i]
+    private Board inverseTransformDown() {
+        int[][] result = new int[n][n];
+        for (int i = 0; i < n; i++) {
+            int[] out = result[i];
+            for (int j = 0; j < n; j++) {
+                out[j] = grid[j][n - 1 - i];
+            }
+        }
+        return new Board(result, n);
     }
 
     @Override
@@ -137,11 +187,20 @@ public final class Board {
         return Arrays.deepEquals(this.grid, board.grid);
     }
 
-    private int[][] copyGrid(int[][] source) {
-        int[][] result = new int[source.length][source.length];
-        for (int i = 0; i < source.length; i++) {
-            System.arraycopy(source[i], 0, result[i], 0, source.length);
+    private static int[][] copyGrid(int[][] source) {
+        int n = source.length;
+        int[][] result = new int[n][n];
+        for (int i = 0; i < n; i++) {
+            System.arraycopy(source[i], 0, result[i], 0, n);
         }
         return result;
+    }
+
+    public static void printGetGridStats() {
+        System.out.println("Board.getGrid() calls = " + getGridCalls);
+    }
+
+    public static void resetGetGridStats() {
+        getGridCalls = 0;
     }
 }

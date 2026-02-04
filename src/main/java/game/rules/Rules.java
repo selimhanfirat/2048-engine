@@ -15,4 +15,6 @@ public interface Rules {
     MoveResult makeMove(Board board, Move move);
 
     EnumSet<Move> getLegalMoves(Board board);
+
+    boolean canMove(Board board, Move move);
 }
