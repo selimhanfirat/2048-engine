@@ -17,9 +17,11 @@ public class WeightedEvaluator implements Evaluator {
     @Override
     public double evaluate(Board board) {
         double score = 0.0;
+        double totalWeight = 0.0;
         for (Term t : terms) {
             score += t.weight() * t.evaluator().evaluate(board);
+            totalWeight += t.weight();
         }
-        return score / terms.size();
+        return score / totalWeight;
     }
 }

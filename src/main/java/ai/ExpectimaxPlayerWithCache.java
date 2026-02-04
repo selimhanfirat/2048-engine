@@ -12,10 +12,21 @@ import game.spawn.Spawner;
 public class ExpectimaxPlayerWithCache implements Player {
 
     private final Evaluator eval;
-
     private final Rules rules;
     private final Spawner spawner;
-    private static final int DEPTH = 2;
+
+    private static final int DEPTH = 4;
+
+    private record CacheKey(Board board, boolean player, int depth) {}
+
+    private final BoardLRUCache<CacheKey, Double> cache = new BoardLRUCache<>(10000);
+
+    private long cacheLookups = 0;
+    private long cacheHits = 0;
+
+    private int decisions = 0;
+    private static final int PRINT_EVERY = 20;
+    private static final boolean DEBUG_CACHE = false;
 
     public ExpectimaxPlayerWithCache(GameConfig config, Evaluator eval) {
         this.eval = eval;
@@ -25,12 +36,13 @@ public class ExpectimaxPlayerWithCache implements Player {
 
     @Override
     public Move chooseMove(Board board) {
+        decisions++;
+
         Move bestMove = Move.LEFT;
         double bestValue = Double.NEGATIVE_INFINITY;
 
         for (Move move : rules.getLegalMoves(board)) {
             Board after = rules.makeMove(board, move).board();
-
             double value = search(after, false, DEPTH);
 
             if (value > bestValue) {
@@ -38,18 +50,29 @@ public class ExpectimaxPlayerWithCache implements Player {
                 bestMove = move;
             }
         }
+
+        if (DEBUG_CACHE && decisions % PRINT_EVERY == 0) {
+            printCacheStats();
+            resetCacheStats();
+        }
+
         return bestMove;
     }
 
-    private record CacheEntry(Integer depth, Double eval){};
-    BoardLRUCache<Board, CacheEntry> cache = new BoardLRUCache<Board, CacheEntry>(10000);
     private double search(Board board, boolean player, int depth) {
-        if (cache.containsKey(board) && cache.get(board).depth == depth) {
-            return cache.get(board).eval;
+        cacheLookups++;
+
+        CacheKey key = new CacheKey(board, player, depth);
+        Double cached = cache.get(key);
+        if (cached != null) {
+            cacheHits++;
+            return cached;
         }
 
         if (depth == 0 || rules.isGameOver(board)) {
-            return eval.evaluate(board);
+            double leaf = eval.evaluate(board);
+            cache.put(key, leaf);
+            return leaf;
         }
 
         double result;
@@ -60,7 +83,6 @@ public class ExpectimaxPlayerWithCache implements Player {
                 maxValue = Math.max(maxValue, search(next, false, depth - 1));
             }
             result = maxValue;
-
         } else { // CHANCE
             double expected = 0.0;
             for (Outcome outcome : spawner.distribution(board).outcomes()) {
@@ -68,7 +90,26 @@ public class ExpectimaxPlayerWithCache implements Player {
             }
             result = expected;
         }
-        cache.put(board, new CacheEntry(depth, result));
+
+        cache.put(key, result);
         return result;
+    }
+
+    private void printCacheStats() {
+        if (cacheLookups == 0) {
+            System.out.println("Cache stats: no lookups");
+            return;
+        }
+
+        double hitRate = 100.0 * cacheHits / cacheLookups;
+        System.out.printf(
+                "Cache stats: hits=%d, lookups=%d, hit rate=%.2f%%%n",
+                cacheHits, cacheLookups, hitRate
+        );
+    }
+
+    private void resetCacheStats() {
+        cacheLookups = 0;
+        cacheHits = 0;
     }
 }

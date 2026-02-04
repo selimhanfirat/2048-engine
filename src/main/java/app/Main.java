@@ -42,8 +42,8 @@ public class Main {
 
     private static Player getPlayer(String aiType, GameConfig config) {
         Evaluator evaluator = new WeightedEvaluator(List.of(
-                new WeightedEvaluator.Term(new MonotonicityEvaluator(), 1.0),
-                new WeightedEvaluator.Term(new EmptyCellsEvaluator(), 1.0)
+                new WeightedEvaluator.Term(new MonotonicityEvaluator(), 2.0),
+                new WeightedEvaluator.Term(new EmptyCellsEvaluator(), 3.0)
         ));
 
         return switch (aiType) {
