@@ -83,7 +83,7 @@ public final class Board {
     }
 
     public int getMaxTile() {
-        int maxTile = 0;
+        int maxTile = Integer.MIN_VALUE;
         for (int i = 0; i < n; i++) {
             int[] row = grid[i];
             for (int j = 0; j < n; j++) {

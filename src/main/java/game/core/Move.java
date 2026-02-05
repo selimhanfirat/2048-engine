@@ -16,10 +16,4 @@ public enum Move {
     public int code() {
         return code;
     }
-
-    public static Move random() {
-        return VALUES[java.util.concurrent.ThreadLocalRandom
-                .current()
-                .nextInt(VALUES.length)];
-    }
 }

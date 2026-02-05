@@ -4,6 +4,7 @@ import game.core.Board;
 import game.core.Move;
 import game.core.MoveResult;
 
+import java.util.Arrays;
 import java.util.EnumSet;
 
 public class ClassicRules2048 implements Rules {
@@ -25,12 +26,13 @@ public class ClassicRules2048 implements Rules {
     private void setFromLeftSpace(int[][] out, Move move, int i, int j, int value) {
         int n = out.length;
         switch (move) {
-            case LEFT -> out[i][j] = value;
+            case LEFT  -> out[i][j] = value;
             case RIGHT -> out[i][n - 1 - j] = value;
-            case UP -> out[j][i] = value;
-            case DOWN -> out[j][n - 1 - i] = value;
+            case UP    -> out[j][i] = value;
+            case DOWN  -> out[n - 1 - j][i] = value; // FIX
         }
     }
+
     // Rules implementation
     @Override
     public boolean isGameOver(Board board) {
@@ -50,7 +52,7 @@ public class ClassicRules2048 implements Rules {
 
         for (int i = 0; i < n; i++) {
             // reset scratch row
-            for (int k = 0; k < n; k++) rowOut[k] = 0;
+            Arrays.fill(rowOut, 0);
 
             int write = 0;
             int lastMergedAt = -1;
