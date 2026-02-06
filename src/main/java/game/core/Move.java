@@ -7,7 +7,14 @@ public enum Move {
     DOWN(4);
 
     private final int code;
-    private static final Move[] VALUES = values();
+    private Move opposite;
+
+    static {
+        LEFT.opposite = RIGHT;
+        RIGHT.opposite = LEFT;
+        UP.opposite = DOWN;
+        DOWN.opposite = UP;
+    }
 
     Move(int code) {
         this.code = code;
@@ -15,5 +22,9 @@ public enum Move {
 
     public int code() {
         return code;
+    }
+
+    public Move opposite() {
+        return opposite;
     }
 }

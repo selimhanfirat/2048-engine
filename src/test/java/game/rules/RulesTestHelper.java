@@ -23,6 +23,16 @@ final class RulesTestHelper {
         return new Board(values);
     }
 
+    static int[][] toSquare(int[] flat, int n) {
+        int[][] grid = new int[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                grid[i][j] = flat[i * n + j];        // row-major mapping
+            }
+        }
+        return grid;
+    }
+
     /* =========================================================
        Board inspection
        ========================================================= */
