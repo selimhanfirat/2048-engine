@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Go to repo root (directory of this script)
+cd "$(dirname "$0")"
+
+# Build (quiet compile)
+mvn -q -DskipTests compile
+
+MAIN_CLASS="app.Main"
+
+exec java -cp target/classes "$MAIN_CLASS" "$@"
