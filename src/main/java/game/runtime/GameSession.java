@@ -28,7 +28,7 @@ public final class GameSession {
     }
 
     public SessionResult runGame() {
-        // timing start (doesn't affect logic)
+        // timing start
         final long wallStart = System.nanoTime();
         final long cpuStart = (CPU_TIME_SUPPORTED && THREAD_MX_BEAN.isThreadCpuTimeEnabled())
                 ? THREAD_MX_BEAN.getCurrentThreadCpuTime()
@@ -52,7 +52,7 @@ public final class GameSession {
             maxTile = Math.max(maxTile, game.getState().getMaxTile());
         }
 
-        // timing end (doesn't affect logic)
+        // timing end
         final long wallEnd = System.nanoTime();
         final long cpuEnd = (cpuStart != -1L)
                 ? THREAD_MX_BEAN.getCurrentThreadCpuTime()

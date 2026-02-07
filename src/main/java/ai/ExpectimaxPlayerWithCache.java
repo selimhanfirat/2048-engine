@@ -15,7 +15,7 @@ public class ExpectimaxPlayerWithCache implements Player {
     private final Rules rules;
     private final Spawner spawner;
 
-    private static final int DEPTH = 4;
+    private static final int DEPTH = 2;
 
     private record CacheKey(Board board, boolean player, int depth) {}
 
@@ -41,7 +41,9 @@ public class ExpectimaxPlayerWithCache implements Player {
         Move bestMove = Move.LEFT;
         double bestValue = Double.NEGATIVE_INFINITY;
 
-        for (Move move : rules.getLegalMoves(board)) {
+        for (Move move : Move.values()) {
+            if (!rules.canMove(board, move)) continue;
+
             Board after = rules.makeMove(board, move).board();
             double value = search(after, false, DEPTH);
 
@@ -69,25 +71,40 @@ public class ExpectimaxPlayerWithCache implements Player {
             return cached;
         }
 
-        if (depth == 0 || rules.isGameOver(board)) {
+        if (depth == 0) {
+            double leaf = eval.evaluate(board);
+            cache.put(key, leaf);
+            return leaf;
+        }
+
+        // If no legal moves, it's terminal
+        if (rules.isGameOver(board)) {
             double leaf = eval.evaluate(board);
             cache.put(key, leaf);
             return leaf;
         }
 
         double result;
+
         if (player) { // MAX
             double maxValue = Double.NEGATIVE_INFINITY;
-            for (Move move : rules.getLegalMoves(board)) {
+
+            for (Move move : Move.values()) {
+                if (!rules.canMove(board, move)) continue;
+
                 Board next = rules.makeMove(board, move).board();
-                maxValue = Math.max(maxValue, search(next, false, depth - 1));
+                double v = search(next, false, depth - 1);
+                if (v > maxValue) maxValue = v;
             }
+
             result = maxValue;
         } else { // CHANCE
             double expected = 0.0;
+
             for (Outcome outcome : spawner.distribution(board).outcomes()) {
                 expected += outcome.probability() * search(outcome.board(), true, depth - 1);
             }
+
             result = expected;
         }
 
@@ -100,7 +117,6 @@ public class ExpectimaxPlayerWithCache implements Player {
             System.out.println("Cache stats: no lookups");
             return;
         }
-
         double hitRate = 100.0 * cacheHits / cacheLookups;
         System.out.printf(
                 "Cache stats: hits=%d, lookups=%d, hit rate=%.2f%%%n",

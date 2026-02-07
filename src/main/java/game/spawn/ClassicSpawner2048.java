@@ -9,7 +9,7 @@ import java.util.List;
 
 public class ClassicSpawner2048 implements Spawner {
 
-    private final double p2; // probability of spawning 2
+    private final double p2;
 
     public ClassicSpawner2048(double p2) {
         if (p2 < 0.0 || p2 > 1.0) {
@@ -53,19 +53,19 @@ public class ClassicSpawner2048 implements Spawner {
 
     @Override
     public Board sample(Board board, Rng rng) {
-        SpawnDistribution dist = distribution(board);
+        int[] emptyCells = board.getEmptyCells();
+        int n = emptyCells.length;
 
-        double r = rng.nextDouble();
-        double acc = 0.0;
-
-        for (SpawnDistribution.Outcome o : dist.outcomes()) {
-            acc += o.probability();
-            if (r <= acc) {
-                return o.board();
-            }
+        if (n == 0) {
+            throw new IllegalStateException("No empty cells");
         }
 
-        // numerical / rounding fallback
-        return dist.outcomes().get(dist.outcomes().size() - 1).board();
+        int cell = emptyCells[rng.nextInt(n)];
+        int dim = board.getDimension();
+        int row = cell / dim;
+        int col = cell % dim;
+
+        int value = (rng.nextDouble() < p2) ? 2 : 4;
+        return board.placeTile(new Coordinate(row, col), value);
     }
 }

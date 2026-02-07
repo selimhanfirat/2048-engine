@@ -4,66 +4,120 @@ import game.core.Board;
 import game.core.Move;
 import game.core.MoveResult;
 
+import java.util.Arrays;
 import java.util.EnumSet;
 
 public class ClassicRules2048 implements Rules {
 
     public ClassicRules2048() {}
 
-    // given a board, detect if game over
+    // Read board as if transformed into LEFT-space
+    private int getLeftSpace(Board board, Move move, int i, int j) {
+        int n = board.getDimension();
+        return switch (move) {
+            case LEFT  -> board.get(i, j);
+            case RIGHT -> board.get(i, n - 1 - j);
+            case UP    -> board.get(j, i);
+            case DOWN  -> board.get(n - 1 - j, i);
+        };
+    }
+
+    // Write a LEFT-space cell back into final board orientation
+    private void setFromLeftSpace(int[][] out, Move move, int i, int j, int value) {
+        int n = out.length;
+        switch (move) {
+            case LEFT  -> out[i][j] = value;
+            case RIGHT -> out[i][n - 1 - j] = value;
+            case UP    -> out[j][i] = value;
+            case DOWN  -> out[n - 1 - j][i] = value; // FIX
+        }
+    }
+
+    // Rules implementation
+    @Override
     public boolean isGameOver(Board board) {
         return getLegalMoves(board).isEmpty();
     }
 
-    // make a move and return the new board
+    @Override
     public MoveResult makeMove(Board board, Move move) {
-        // depending on the move type we either/or reverse, transpose the array so that any move is equivalent to a left move
-        board = board.applyTransformation(move);
         int n = board.getDimension();
-
-
         int scoreGained = 0;
-        int[][] grid = board.getGrid();
-        int[][] newGrid = new int[n][n];
-        // every row is independent, we loop over each of them.
-        for (int i = 0; i < n; i++) {
-            int movableIndex = 0;
-            for (int j = 0; j < n; j++) {
-                if (grid[i][j] != 0) {
 
-                    // if target slot is empty, just place
-                    if (newGrid[i][movableIndex] == 0) {
-                        newGrid[i][movableIndex] = grid[i][j];
-                    }
-                    // if mergeable, merge into dst
-                    else if (newGrid[i][movableIndex] == grid[i][j]) {
-                        newGrid[i][movableIndex] = grid[i][j] * 2;
-                        grid[i][j] = 0;
-                        scoreGained += newGrid[i][movableIndex];
-                        movableIndex++; // move past merged tile
-                    }
-                    // otherwise move to next slot
-                    else {
-                        movableIndex++;
-                        newGrid[i][movableIndex] = grid[i][j];
-                    }
+        // Final board grid (already in correct orientation)
+        int[][] trustedOut = new int[n][n];
+
+        // Scratch row in LEFT-space
+        int[] rowOut = new int[n];
+
+        for (int i = 0; i < n; i++) {
+            // reset scratch row
+            Arrays.fill(rowOut, 0);
+
+            int write = 0;
+            int lastMergedAt = -1;
+
+            for (int j = 0; j < n; j++) {
+                int v = getLeftSpace(board, move, i, j);
+                if (v == 0) continue;
+
+                if (rowOut[write] == 0) {
+                    rowOut[write] = v;
+                } else if (rowOut[write] == v && lastMergedAt != write) {
+                    rowOut[write] = v * 2;
+                    scoreGained += rowOut[write];
+                    lastMergedAt = write;
+                    write++;
+                } else {
+                    write++;
+                    rowOut[write] = v;
+                }
+            }
+
+            // write LEFT-space row into final board orientation
+            for (int j = 0; j < n; j++) {
+                int v = rowOut[j];
+                if (v != 0) {
+                    setFromLeftSpace(trustedOut, move, i, j, v);
                 }
             }
         }
-
-        Board newBoard = new Board(newGrid).applyInverseTransformation(move);
-        return new MoveResult(newBoard, scoreGained);
+        return new MoveResult(Board.wrapTrustedGrid(trustedOut), scoreGained);
     }
 
     @Override
     public EnumSet<Move> getLegalMoves(Board board) {
         EnumSet<Move> legalMoves = EnumSet.noneOf(Move.class);
         for (Move move : Move.values()) {
-            if (!this.makeMove(board, move).board().equals(board)){
+            if (canMove(board, move)) {
                 legalMoves.add(move);
             }
         }
         return legalMoves;
     }
 
+    @Override
+    public boolean canMove(Board board, Move move) {
+        int n = board.getDimension();
+
+        for (int i = 0; i < n; i++) {
+            int lastNonZero = 0;
+            boolean hasLast = false;
+            int targetIndex = 0;
+
+            for (int j = 0; j < n; j++) {
+                int v = getLeftSpace(board, move, i, j);
+                if (v == 0) continue;
+
+                if (j != targetIndex) return true;
+                if (hasLast && lastNonZero == v) return true;
+
+                hasLast = true;
+                lastNonZero = v;
+                targetIndex++;
+            }
+        }
+
+        return false;
+    }
 }
