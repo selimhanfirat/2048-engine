@@ -1,7 +1,6 @@
 package app;
 
-import ai.ExpectimaxPlayerDepth2;
-import ai.ExpectimaxPlayerWithCache;
+import ai.ExpectimaxPlayer;
 import ai.Player;
 import ai.eval.EmptyCellsEvaluator;
 import ai.eval.Evaluator;
@@ -17,8 +16,8 @@ public class Main {
     public static void main(String[] args) {
         if (args.length < 2) {
             System.err.println("Usage: <ai-type> <runs>");
-            System.err.println("Example: depth2 1000");
-            System.err.println("AI types: depth2, cache");
+            System.err.println("Example: nocache 1000");
+            // System.err.println("AI types: nocache, cache");
             System.exit(1);
         }
 
@@ -47,8 +46,8 @@ public class Main {
         ));
 
         return switch (aiType) {
-            case "depth2" -> new ExpectimaxPlayerDepth2(config, evaluator);
-            case "cache" -> new ExpectimaxPlayerWithCache(config, evaluator);
+            case "nocache" -> new ExpectimaxPlayer(config, evaluator);
+            // case "cache" -> new ExpectimaxPlayerWithCache(config, evaluator);
             default -> throw new IllegalArgumentException(
                     "Unknown AI type: " + aiType + " (expected: depth2 | cache)"
             );
