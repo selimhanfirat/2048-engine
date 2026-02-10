@@ -11,32 +11,35 @@ import game.runtime.Presets;
 
 import java.util.List;
 
-public class Main {
+public final class Main {
 
     public static void main(String[] args) {
         if (args.length < 2) {
-            System.err.println("Usage: <ai-type> <runs>");
-            System.err.println("Example: nocache 1000");
-            // System.err.println("AI types: nocache, cache");
             System.exit(1);
         }
 
         String aiType = args[0].toLowerCase();
-        int runs;
-        try {
-            runs = Integer.parseInt(args[1]);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Second argument must be an integer run count. Got: " + args[1], e);
-        }
+        int runs = parseRuns(args[1]);
 
         long baseSeed = 42L;
 
         GameConfig config = Presets.standard2048();
         Player player = getPlayer(aiType, config);
 
-        ExperimentRunner runner = new ExperimentRunner(config, runs, baseSeed, player);
-        var results = runner.run();
-        runner.report(results);
+        ExperimentRunner runner =
+                new ExperimentRunner(config, runs, baseSeed, player);
+
+        runner.run();
+    }
+
+    private static int parseRuns(String s) {
+        try {
+            int runs = Integer.parseInt(s);
+            if (runs <= 0) throw new IllegalArgumentException();
+            return runs;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid run count: " + s);
+        }
     }
 
     private static Player getPlayer(String aiType, GameConfig config) {
@@ -47,10 +50,7 @@ public class Main {
 
         return switch (aiType) {
             case "nocache" -> new ExpectimaxPlayer(config, evaluator);
-            // case "cache" -> new ExpectimaxPlayerWithCache(config, evaluator);
-            default -> throw new IllegalArgumentException(
-                    "Unknown AI type: " + aiType + " (expected: depth2 | cache)"
-            );
+            default -> throw new IllegalArgumentException("Unknown AI type: " + aiType);
         };
     }
 }
