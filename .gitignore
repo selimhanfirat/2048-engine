@@ -12,6 +12,8 @@ buildNumber.properties
 ### IntelliJ IDEA ###
 .idea/
 *.iml
+.run/
+
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
