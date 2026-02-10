@@ -40,3 +40,7 @@ bin/
 
 ### OS ###
 .DS_Store
+
+replays/
+*.json
+
