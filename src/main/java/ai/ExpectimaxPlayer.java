@@ -15,7 +15,7 @@ public class ExpectimaxPlayer implements Player {
     private final Rules rules;
     private final Spawner spawner;
 
-    private static final int DEPTH = 2;
+    private static final int DEPTH = 3;
     private record SearchResult(double eval, Move move){};
 
     public ExpectimaxPlayer(GameConfig config, Evaluator eval) {
