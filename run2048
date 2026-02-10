@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-# Go to repo root (directory of this script)
 cd "$(dirname "$0")"
 
-# Build (quiet compile)
 mvn -q -DskipTests compile
 
-MAIN_CLASS="app.Main"
+mvn -q -DskipTests dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
 
-exec java -cp target/classes "$MAIN_CLASS" "$@"
+CP="target/classes:$(cat target/classpath.txt)"
+
+exec java -cp "$CP" app.Main "$@"

@@ -1,11 +1,13 @@
 package game.runtime;
 
 import ai.Player;
+import backend.GameListener;
 import game.core.Move;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public final class GameSession {
@@ -21,10 +23,17 @@ public final class GameSession {
 
     private final Game game;
     private final Player player;
+    private final List<GameListener> listeners;
+
 
     public GameSession(Game game, Player player) {
+        this(game, player, List.of());
+    }
+
+    public GameSession(Game game, Player player, List<GameListener> listeners) {
         this.game = game;
         this.player = player;
+        this.listeners = (listeners == null) ? List.of() : List.copyOf(listeners);
     }
 
     public SessionResult runGame() {
@@ -41,6 +50,11 @@ public final class GameSession {
         game.initialize();
         maxTile = game.getState().getMaxTile();
 
+        // notify init (step 0)
+        for (GameListener l : listeners) {
+            l.onInit(game.getSeed(), game.getState(), game.getScore());
+        }
+
         while (!game.isGameOver()) {
             Move move = player.chooseMove(game.getState());
 
@@ -50,6 +64,16 @@ public final class GameSession {
             steps++;
 
             maxTile = Math.max(maxTile, game.getState().getMaxTile());
+
+            // notify step AFTER applying move
+            for (GameListener l : listeners) {
+                l.onStep(steps, move, game.getState(), game.getScore());
+            }
+        }
+
+        // notify game over
+        for (GameListener l : listeners) {
+            l.onGameOver(game.getState(), game.getScore(), steps);
         }
 
         // timing end
