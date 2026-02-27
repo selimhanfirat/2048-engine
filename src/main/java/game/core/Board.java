@@ -5,19 +5,17 @@ import game.util.Coordinate;
 import java.util.Arrays;
 
 /**
- * Immutable 2D board.*
- * Notes:
- * - Public constructors defensively copy input grids.
- * - wrapTrustedGrid(...) is an escape hatch for performance: it takes ownership of the provided grid.
+ * Immutable NxN board, stored as a flat array for performance.
+ * Index: cells[r * n + c]
  */
 public final class Board {
 
     private static long getGridCalls = 0;
 
-    private final int[][] grid;
     private final int n;
+    private final int[] cells; // length = n*n
 
-    // Hash is cached because Board is immutable
+    // cached hash
     private int cachedHash;
     private boolean hashComputed = false;
 
@@ -30,37 +28,26 @@ public final class Board {
     }
 
     public Board(int dimension) {
-        if (dimension <= 0) {
-            throw new IllegalArgumentException("Dimension must be positive");
+        if (dimension <= 0) throw new IllegalArgumentException("Dimension must be positive");
+        this.n = dimension;
+        this.cells = new int[n * n];
+    }
+
+    /**
+     * Escape hatch: takes ownership of a trusted flat array (no copy).
+     * Caller must guarantee it will never be mutated again.
+     */
+    public static Board wrapTrustedCells(int n, int[] trustedCells) {
+        if (n <= 0) throw new IllegalArgumentException("n must be positive");
+        if (trustedCells == null || trustedCells.length != n * n) {
+            throw new IllegalArgumentException("trustedCells length must be n*n");
         }
-        this.n = dimension;
-        this.grid = new int[dimension][dimension];
+        return new Board(n, trustedCells);
     }
 
-    /**
-     * Public constructor: defensively copies the provided grid.
-     */
-    public Board(int[][] grid) {
-        validateSquareGrid(grid);
-        this.n = grid.length;
-        this.grid = copyGrid(grid);
-    }
-
-    /**
-     * Performance escape hatch: takes ownership of the given grid (no defensive copy).
-     * Use ONLY when the caller guarantees the array will never be mutated again.
-     */
-    public static Board wrapTrustedGrid(int[][] trustedGrid) {
-        validateSquareGrid(trustedGrid);
-        return new Board(trustedGrid, trustedGrid.length);
-    }
-
-    /**
-     * Internal constructor: assumes grid ownership (no defensive copy).
-     */
-    private Board(int[][] trustedGrid, int dimension) {
-        this.n = dimension;
-        this.grid = trustedGrid;
+    private Board(int n, int[] trustedCells) {
+        this.n = n;
+        this.cells = trustedCells;
     }
 
     /* =========================
@@ -71,60 +58,50 @@ public final class Board {
         return n;
     }
 
-    /** Fast accessor for hot paths (evaluators/search). */
     public int get(int r, int c) {
-        return grid[r][c];
+        return cells[r * n + c];
     }
 
-    /** Defensive copy for external callers. */
+    /** Mainly for UI/testing; creates a defensive 2D copy. */
     public int[][] getGrid() {
         getGridCalls++;
-        return copyGrid(grid);
+        int[][] out = new int[n][n];
+        for (int r = 0; r < n; r++) {
+            System.arraycopy(cells, r * n, out[r], 0, n);
+        }
+        return out;
     }
 
     public int getMaxTile() {
-        int maxTile = Integer.MIN_VALUE;
-        for (int i = 0; i < n; i++) {
-            int[] row = grid[i];
-            for (int j = 0; j < n; j++) {
-                int v = row[j];
-                if (v > maxTile) maxTile = v;
-            }
+        int max = 0;
+        for (int v : cells) {
+            if (v > max) max = v;
         }
-        return maxTile;
+        return max;
     }
 
-    /**
-     * Returns empty cells as flattened indices (r * n + c).
-     */
+    /** Returns empty cells as flattened indices (r * n + c). */
     public int[] getEmptyCells() {
         int count = 0;
-        for (int i = 0; i < n; i++) {
-            int[] row = grid[i];
-            for (int j = 0; j < n; j++) {
-                if (row[j] == 0) count++;
-            }
+        for (int v : cells) {
+            if (v == 0) count++;
         }
 
         int[] empty = new int[count];
         int idx = 0;
-
-        for (int i = 0; i < n; i++) {
-            int[] row = grid[i];
-            int base = i * n;
-            for (int j = 0; j < n; j++) {
-                if (row[j] == 0) {
-                    empty[idx++] = base + j;
-                }
-            }
+        for (int i = 0; i < cells.length; i++) {
+            if (cells[i] == 0) empty[idx++] = i;
         }
         return empty;
     }
 
-    public Board placeTile(Coordinate coordinate, int value) {
-        int[][] newGrid = copyGrid(grid);
-        newGrid[coordinate.x()][coordinate.y()] = value;
-        return new Board(newGrid, n);
+    public Board placeTile(int cellIndex, int value) {
+        if (cellIndex < 0 || cellIndex >= n * n) {
+            throw new IndexOutOfBoundsException("cellIndex out of range: " + cellIndex);
+        }
+        int[] copy = Arrays.copyOf(cells, cells.length);
+        copy[cellIndex] = value;
+        return Board.wrapTrustedCells(n, copy);
     }
 
     /* =========================
@@ -134,41 +111,16 @@ public final class Board {
     @Override
     public boolean equals(Object other) {
         if (this == other) return true;
-        if (!(other instanceof Board board)) return false;
-        return Arrays.deepEquals(this.grid, board.grid);
+        if (!(other instanceof Board b)) return false;
+        return this.n == b.n && Arrays.equals(this.cells, b.cells);
     }
 
     @Override
     public int hashCode() {
         if (!hashComputed) {
-            cachedHash = Arrays.deepHashCode(grid);
+            cachedHash = 31 * n + Arrays.hashCode(cells);
             hashComputed = true;
         }
         return cachedHash;
-    }
-
-    /* =========================
-       Helpers
-       ========================= */
-
-    private static void validateSquareGrid(int[][] grid) {
-        if (grid == null || grid.length == 0) {
-            throw new IllegalArgumentException("cannot have a 0x0 array");
-        }
-        int n = grid.length;
-        for (int i = 0; i < n; i++) {
-            if (grid[i] == null || grid[i].length != n) {
-                throw new IllegalArgumentException("Non-square grid");
-            }
-        }
-    }
-
-    private static int[][] copyGrid(int[][] source) {
-        int n = source.length;
-        int[][] result = new int[n][n];
-        for (int i = 0; i < n; i++) {
-            System.arraycopy(source[i], 0, result[i], 0, n);
-        }
-        return result;
     }
 }

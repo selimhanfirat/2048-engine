@@ -1,7 +1,6 @@
 package ai;
 
 import ai.eval.Evaluator;
-import ai.util.BoardLRUCache;
 import game.core.Board;
 import game.core.Move;
 import game.rules.Rules;
@@ -16,7 +15,36 @@ public class ExpectimaxPlayer implements Player {
     private final Spawner spawner;
 
     private static final int DEPTH = 2;
-    private record SearchResult(double eval, Move move){};
+
+    private record SearchResult(double eval, Move move) {}
+
+    // ---- instrumentation ----
+    private long nodes;
+    private long evalCalls;
+    private long chanceNodes;
+    private long chanceOutcomes;
+    private long searchNanos;
+
+    public record SearchStats(
+            long nodes,
+            long evalCalls,
+            long chanceNodes,
+            long chanceOutcomes,
+            long searchNanos
+    ) {
+    }
+
+    public void resetStats() {
+        nodes = 0;
+        evalCalls = 0;
+        chanceNodes = 0;
+        chanceOutcomes = 0;
+        searchNanos = 0;
+    }
+
+    public SearchStats getStats() {
+        return new SearchStats(nodes, evalCalls, chanceNodes, chanceOutcomes, searchNanos);
+    }
 
     public ExpectimaxPlayer(GameConfig config, Evaluator eval) {
         this.eval = eval;
@@ -26,51 +54,65 @@ public class ExpectimaxPlayer implements Player {
 
     @Override
     public Move chooseMove(Board board) {
-        return playerNode(board, DEPTH).move();
+        long t0 = System.nanoTime();
+        SearchResult result = search(board, DEPTH * 2, true);
+        searchNanos += (System.nanoTime() - t0);
+        return result.move();
     }
 
-    private SearchResult playerNode(Board board, int depth) {
-        if (depth == 0) {
-            return new SearchResult(eval.evaluate(board), null);
+    private SearchResult search(Board board, int pliesLeft, boolean playerTurn) {
+        nodes++;
+
+        if (pliesLeft == 0) {
+            return leaf(board);
         }
 
-        var moves = rules.getLegalMoves(board);
-        if (rules.isGameOver(board)) {
-            return new SearchResult(eval.evaluate(board), null);
-        }
-
-        double bestScore = Double.NEGATIVE_INFINITY;
-        Move bestMove = null;
-
-        for (Move m : moves) {
-            Board afterMove = rules.makeMove(board, m).board();
-
-            // Spend one player choice, THEN force a spawn, THEN recurse.
-            double score = chanceNode(afterMove, depth - 1).eval;
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestMove = m;
+        if (playerTurn) {
+            var moves = rules.getLegalMoves(board);
+            if (moves.isEmpty()) {
+                return leaf(board);
             }
+
+            double bestScore = Double.NEGATIVE_INFINITY;
+            Move bestMove = null;
+
+            for (Move m : moves) {
+                Board afterMove = rules.makeMove(board, m).board();
+                double score = search(afterMove, pliesLeft - 1, false).eval;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = m;
+                }
+            }
+            return new SearchResult(bestScore, bestMove);
+
+        } else {
+            chanceNodes++;
+
+            var outcomes = spawner.distribution(board).outcomes();
+            chanceOutcomes += outcomes.size();
+
+            if (outcomes.isEmpty()) {
+                return search(board, pliesLeft - 1, true);
+            }
+
+            int[] empties = board.getEmptyCells();
+            double pCell = 1.0 / empties.length;
+            double p2 = spawner.getP2();
+            double p4 = 1.0 - p2;
+
+            double expected = 0.0;
+            for (int cell : empties) {
+                expected += pCell * p2 * search(board.placeTile(cell, 2), pliesLeft - 1, true).eval;
+                expected += pCell * p4 * search(board.placeTile(cell, 4), pliesLeft - 1, true).eval;
+            }
+            return new SearchResult(expected, null);
         }
-        return new SearchResult(bestScore, bestMove);
     }
 
-    private SearchResult chanceNode(Board boardAfterMove, int depth) {
-
-        var outcomes = spawner.distribution(boardAfterMove).outcomes();
-
-        // If there are no possible spawns, treat it like "no random event" and continue.
-        if (outcomes.isEmpty()) {
-            return playerNode(boardAfterMove, depth);
-        }
-
-        double expected = 0.0;
-        for (Outcome o : outcomes) {
-            expected += o.probability() * playerNode(o.board(), depth).eval;
-        }
-        return new SearchResult(expected, null);
+    private SearchResult leaf(Board board) {
+        evalCalls++;
+        return new SearchResult(eval.evaluate(board), null);
     }
-
-
 }

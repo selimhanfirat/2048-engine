@@ -22,18 +22,16 @@ public class ClassicRules2048 implements Rules {
         };
     }
 
-    // Write a LEFT-space cell back into final board orientation
-    private void setFromLeftSpace(int[][] out, Move move, int i, int j, int value) {
-        int n = out.length;
+    // Write a LEFT-space cell back into final board orientation (flat output)
+    private void setFromLeftSpace(int[] out, int n, Move move, int i, int j, int value) {
         switch (move) {
-            case LEFT  -> out[i][j] = value;
-            case RIGHT -> out[i][n - 1 - j] = value;
-            case UP    -> out[j][i] = value;
-            case DOWN  -> out[n - 1 - j][i] = value; // FIX
+            case LEFT  -> out[i * n + j] = value;
+            case RIGHT -> out[i * n + (n - 1 - j)] = value;
+            case UP    -> out[j * n + i] = value;
+            case DOWN  -> out[(n - 1 - j) * n + i] = value;
         }
     }
 
-    // Rules implementation
     @Override
     public boolean isGameOver(Board board) {
         return getLegalMoves(board).isEmpty();
@@ -44,14 +42,13 @@ public class ClassicRules2048 implements Rules {
         int n = board.getDimension();
         int scoreGained = 0;
 
-        // Final board grid (already in correct orientation)
-        int[][] trustedOut = new int[n][n];
+        // Final board cells (flat). This is already in correct orientation.
+        int[] out = new int[n * n];
 
         // Scratch row in LEFT-space
         int[] rowOut = new int[n];
 
         for (int i = 0; i < n; i++) {
-            // reset scratch row
             Arrays.fill(rowOut, 0);
 
             int write = 0;
@@ -78,11 +75,12 @@ public class ClassicRules2048 implements Rules {
             for (int j = 0; j < n; j++) {
                 int v = rowOut[j];
                 if (v != 0) {
-                    setFromLeftSpace(trustedOut, move, i, j, v);
+                    setFromLeftSpace(out, n, move, i, j, v);
                 }
             }
         }
-        return new MoveResult(Board.wrapTrustedGrid(trustedOut), scoreGained);
+
+        return new MoveResult(Board.wrapTrustedCells(n, out), scoreGained);
     }
 
     @Override

@@ -2,12 +2,13 @@ package app;
 
 import ai.ExpectimaxPlayer;
 import ai.Player;
-import ai.eval.EmptyCellsEvaluator;
 import ai.eval.Evaluator;
-import ai.eval.MonotonicityEvaluator;
-import ai.eval.WeightedEvaluator;
+import ai.eval.ClassicEvaluator;
+import game.rules.ClassicRules2048;
+import game.rules.Rules;
 import game.runtime.GameConfig;
-import game.runtime.Presets;
+import game.spawn.ClassicSpawner2048;
+import game.spawn.Spawner;
 
 import java.util.List;
 
@@ -31,7 +32,12 @@ public class Main {
 
         long baseSeed = 42L;
 
-        GameConfig config = Presets.standard2048();
+        int gridSize = 4;
+        double p = 0.9;
+        Rules rules = new ClassicRules2048();
+        Spawner spawner = new ClassicSpawner2048(p);
+
+        GameConfig config = new GameConfig(gridSize, rules, spawner);
         Player player = getPlayer(aiType, config);
 
         ExperimentRunner runner = new ExperimentRunner(config, runs, baseSeed, player);
@@ -40,10 +46,7 @@ public class Main {
     }
 
     private static Player getPlayer(String aiType, GameConfig config) {
-        Evaluator evaluator = new WeightedEvaluator(List.of(
-                new WeightedEvaluator.Term(new MonotonicityEvaluator(), 2.0),
-                new WeightedEvaluator.Term(new EmptyCellsEvaluator(), 3.0)
-        ));
+        Evaluator evaluator = new ClassicEvaluator();
 
         return switch (aiType) {
             case "nocache" -> new ExpectimaxPlayer(config, evaluator);

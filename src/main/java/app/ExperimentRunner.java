@@ -1,8 +1,7 @@
 package app;
 
 import ai.Player;
-import game.core.Board;
-import game.runtime.Game;
+import ai.ExpectimaxPlayer;
 import game.runtime.GameConfig;
 import game.runtime.GameSession;
 import game.runtime.SessionResult;
@@ -16,6 +15,14 @@ public final class ExperimentRunner {
     private final int runs;
     private final long baseSeed;
     private final Player player;
+
+    // ---- aggregated search stats from the last run() ----
+    private boolean lastHasSearchStats = false;
+    private long lastTotalNodes = 0;
+    private long lastTotalEvalCalls = 0;
+    private long lastTotalChanceNodes = 0;
+    private long lastTotalChanceOutcomes = 0;
+    private long lastTotalSearchNanos = 0;
 
     public ExperimentRunner(
             GameConfig config,
@@ -32,18 +39,50 @@ public final class ExperimentRunner {
     public List<SessionResult> run() {
         List<SessionResult> results = new ArrayList<>(runs);
 
-        int count = 1;
+        lastHasSearchStats = (player instanceof ExpectimaxPlayer);
+        lastTotalNodes = 0;
+        lastTotalEvalCalls = 0;
+        lastTotalChanceNodes = 0;
+        lastTotalChanceOutcomes = 0;
+        lastTotalSearchNanos = 0;
+
+        if (player instanceof ExpectimaxPlayer e) {
+            e.resetStats();
+        }
+
         for (int i = 0; i < runs; i++) {
             long seed = baseSeed + i;
 
-            Game game = new Game(config, seed);
+            GameSession session = new GameSession(config, seed);
+            results.add(session.runGame(player));
 
-            GameSession session = new GameSession(game, player);
-            results.add(session.runGame());
+            // pull per-game stats from expectimax and aggregate
+            if (player instanceof ExpectimaxPlayer e) {
+                ExpectimaxPlayer.SearchStats s = e.getStats();
+
+                lastTotalNodes += s.nodes();
+                lastTotalEvalCalls += s.evalCalls();
+                lastTotalChanceNodes += s.chanceNodes();
+                lastTotalChanceOutcomes += s.chanceOutcomes();
+                lastTotalSearchNanos += s.searchNanos();
+
+                e.resetStats();
+            }
+
+            int count = i + 1;
             if (count % 5 == 0) {
                 System.out.println("Run " + count + " of " + runs + " is complete");
+
+                if (lastHasSearchStats) {
+                    double sec = lastTotalSearchNanos / 1_000_000_000.0;
+                    double nps = sec > 0 ? lastTotalNodes / sec : 0.0;
+                    double avgOutcomes = lastTotalChanceNodes > 0
+                            ? lastTotalChanceOutcomes / (double) lastTotalChanceNodes
+                            : 0.0;
+
+                    System.out.printf("  Search so far: nodes/sec=%.0f, avgOutcomes=%.2f%n", nps, avgOutcomes);
+                }
             }
-            count++;
         }
 
         return results;
@@ -121,5 +160,29 @@ public final class ExperimentRunner {
             System.out.println("  CPU time        : unavailable");
         }
 
+        if (lastHasSearchStats) {
+            double searchSec = lastTotalSearchNanos / 1_000_000_000.0;
+            double nodesPerSec = searchSec > 0 ? lastTotalNodes / searchSec : 0.0;
+            double avgOutcomes = lastTotalChanceNodes > 0
+                    ? lastTotalChanceOutcomes / (double) lastTotalChanceNodes
+                    : 0.0;
+
+            double avgNodesPerMove = totalSteps > 0
+                    ? lastTotalNodes / (double) totalSteps
+                    : 0.0;
+
+            double avgMsPerMove = totalSteps > 0
+                    ? (lastTotalSearchNanos / 1_000_000.0) / totalSteps
+                    : 0.0;
+
+            System.out.println();
+            System.out.println("Search");
+            System.out.printf("  Total search time   : %.3f s%n", searchSec);
+            System.out.printf("  Nodes/sec           : %.0f%n", nodesPerSec);
+            System.out.printf("  Avg nodes per move  : %.0f%n", avgNodesPerMove);
+            System.out.printf("  Avg ms per move     : %.3f ms%n", avgMsPerMove);
+            System.out.printf("  Avg outcomes/chance : %.2f%n", avgOutcomes);
+            System.out.printf("  Eval calls          : %d%n", lastTotalEvalCalls);
+        }
     }
 }
