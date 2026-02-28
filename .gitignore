@@ -54,4 +54,6 @@ bin/
 replays/
 *.json
 
+reports/
+
 .run/

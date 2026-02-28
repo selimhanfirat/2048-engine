@@ -1,4 +1,4 @@
-package app.cli;
+package app;
 
 import ai.ExpectimaxPlayer;
 import ai.Player;
@@ -9,11 +9,16 @@ import app.experiment.ExperimentRunner;
 import app.dto.ExperimentSpec;
 import app.dto.ExperimentCase;
 import app.dto.RunPlan;
+import app.output.MarkdownFileSink;
+import app.output.OutputSink;
 import game.rules.ClassicRules2048;
 import game.rules.Rules;
 import game.runtime.GameConfig;
 import game.spawn.ClassicSpawner2048;
 import game.spawn.Spawner;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -97,8 +102,14 @@ public class Main {
         // ---- run ----
         RunPlan plan = new RunPlan(runs, seed, warmupFraction, checkpoints);
         ExperimentRunner runner = new ExperimentRunner(config);
+        String reportPath = buildMarkdownReportPath(aiArg, depthArg, cacheArg, runs, seed, warmupFraction, checkpoints);
 
-        runner.runExperiment(experiments, plan, List.of(new ConsoleSink()));
+        List<OutputSink> sinks = List.of(
+                new ConsoleSink(),
+                new MarkdownFileSink(reportPath)
+        );
+
+        runner.runExperiment(experiments, plan, sinks);
     }
 
     private static Player getPlayer(String aiType, GameConfig config, int depth, boolean useCache) {
@@ -162,6 +173,44 @@ public class Main {
         if (v < 0.0) v = 0.0;
         if (v > 0.95) v = 0.95;
         return v;
+    }
+
+    private static String buildMarkdownReportPath(
+            String aiArg,
+            String depthArg,
+            String cacheArg,
+            int runs,
+            long seed,
+            double warmupFraction,
+            int checkpoints
+    ) {
+        Path dir = Path.of("reports", "markdownFiles");
+        try {
+            Files.createDirectories(dir);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to create directory: " + dir.toAbsolutePath(), e);
+        }
+
+        String fileName = "report_"
+                + "ai-" + slug(aiArg)
+                + "_depth-" + slug(depthArg)
+                + "_cache-" + slug(cacheArg)
+                + "_runs-" + runs
+                + "_seed-" + seed
+                + "_warmup-" + Math.round(warmupFraction * 100) + "pct"
+                + "_cp-" + checkpoints
+                + ".md";
+
+        return dir.resolve(fileName).toString();
+    }
+
+    private static String slug(String s) {
+        if (s == null || s.isBlank()) return "default";
+        return s.trim().toLowerCase()
+                .replace(",", "-")
+                .replaceAll("\\s+", "")
+                .replaceAll("[^a-z0-9_-]", "-")
+                .replaceAll("-{2,}", "-");
     }
 
     private static String requireValue(String[] args, int idx, String flag) {
