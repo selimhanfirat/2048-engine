@@ -1,6 +1,5 @@
 package game.core;
 
-import game.util.Coordinate;
 
 import java.util.Arrays;
 

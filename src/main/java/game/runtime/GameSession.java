@@ -56,14 +56,12 @@ public final class GameSession {
 
         int steps = 0;
         int maxTile;
-        Map<Move, Integer> moveCounts = new HashMap<>();
 
         initialize();
         maxTile = state.getMaxTile();
 
         while (!isGameOver()) {
             Move move = player.chooseMove(state);
-            moveCounts.merge(move, 1, Integer::sum);
 
             step(move);
             steps++;
@@ -85,7 +83,6 @@ public final class GameSession {
                 steps,
                 maxTile,
                 maxTile >= 2048,
-                Map.copyOf(moveCounts),
                 wallNanos,
                 cpuNanos
         );
@@ -104,7 +101,6 @@ public final class GameSession {
 
         int steps = 0;
         int maxTile;
-        Map<Move, Integer> moveCounts = new HashMap<>();
 
         initialize();
         maxTile = state.getMaxTile();
@@ -145,7 +141,6 @@ public final class GameSession {
                 break;
             }
 
-            moveCounts.merge(move, 1, Integer::sum);
 
             MoveResult result =
                     config.rules().makeMove(state, move);
@@ -210,7 +205,6 @@ public final class GameSession {
                 steps,
                 maxTile,
                 maxTile >= 2048,
-                Map.copyOf(moveCounts),
                 wallNanos,
                 cpuNanos
         );
