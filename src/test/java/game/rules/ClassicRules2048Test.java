@@ -9,7 +9,7 @@ import java.util.EnumSet;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ClassicRules2048MoreTest {
+class ClassicRules2048Test {
 
     private final ClassicRules2048 rules = new ClassicRules2048();
 
