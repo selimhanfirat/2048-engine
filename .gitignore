@@ -45,9 +45,11 @@ bin/
 ### OS ###
 .DS_Store
 
+## Jqwik junk
+.jqwik-database/
+**/.jqwik-database/
 .jqwik/
 **/.jqwik/
-
 
 replays/
 *.json
