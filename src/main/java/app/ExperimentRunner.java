@@ -53,7 +53,8 @@ public final class ExperimentRunner {
             e.resetStats();
         }
 
-        int progressStep = Math.max(1, runs / 10); // 10 progress updates
+        int progressUpdateFrequency = 5;
+        int progressStep = Math.max(1, runs / progressUpdateFrequency);
 
         for (int i = 0; i < runs; i++) {
             long seed = baseSeed + i;
