@@ -2,69 +2,57 @@ package ui;
 
 import game.core.Board;
 
+/**
+ * Pretty console renderer for a 2048 board.
+ * Intended for interactive/debug use (not performance-critical).
+ */
 public final class BoardRenderer {
 
-    private BoardRenderer() {} // no instances
+    private BoardRenderer() {}
 
-    /** Pretty unicode box table. */
-    public static String pretty(Board board) {
-        int[][] g = board.getGrid();
-        int n = g.length;
+    /** Returns a pretty ASCII rendering of the board. */
+    public static String render(Board board) {
+        int n = board.getDimension();
 
-        int width = cellWidth(g);
-        String top    = border('┌', '┬', '┐', n, width);
-        String mid    = border('├', '┼', '┤', n, width);
-        String bottom = border('└', '┴', '┘', n, width);
+        // Determine max width needed for cell contents
+        int maxVal = 0;
+        for (int r = 0; r < n; r++) {
+            for (int c = 0; c < n; c++) {
+                maxVal = Math.max(maxVal, board.get(r, c));
+            }
+        }
+
+        // Minimum width keeps small boards readable; scale for big tiles.
+        int cellW = Math.max(4, String.valueOf(maxVal).length() + 1);
+
+        String horizontal = horizontalLine(n, cellW);
 
         StringBuilder sb = new StringBuilder();
-        sb.append(top).append('\n');
-        for (int i = 0; i < n; i++) {
-            sb.append(rowLine(g, i, n, width)).append('\n');
-            if (i != n - 1) sb.append(mid).append('\n');
+        sb.append(horizontal).append('\n');
+
+        for (int r = 0; r < n; r++) {
+            sb.append("|");
+            for (int c = 0; c < n; c++) {
+                int v = board.get(r, c);
+                String s = (v == 0) ? "." : Integer.toString(v);
+                sb.append(padLeft(s, cellW)).append("|");
+            }
+            sb.append('\n').append(horizontal).append('\n');
         }
-        sb.append(bottom);
+
         return sb.toString();
     }
 
-    /** Convenience printing helper. */
+    /** Convenience: prints directly to stdout. */
     public static void print(Board board) {
-        System.out.println(pretty(board));
+        System.out.print(render(board));
     }
 
-    /** Minimal renderer (no unicode), good for logs/tests. */
-    public static String compact(Board board) {
-        return java.util.Arrays.deepToString(board.getGrid());
-    }
-
-    private static int cellWidth(int[][] g) {
-        int max = 0;
-        for (int[] row : g) {
-            for (int v : row) max = Math.max(max, v);
-        }
-        int digits = (max <= 0) ? 1 : String.valueOf(max).length();
-        return Math.max(3, digits + 2); // looks nice: includes some breathing room
-    }
-
-    private static String border(char left, char mid, char right, int n, int width) {
+    private static String horizontalLine(int n, int cellW) {
         StringBuilder sb = new StringBuilder();
-        sb.append(left);
-        for (int j = 0; j < n; j++) {
-            sb.append("─".repeat(width + 2)); // spaces around content
-            sb.append(j == n - 1 ? right : mid);
-        }
-        return sb.toString();
-    }
-
-    private static String rowLine(int[][] g, int i, int n, int width) {
-        StringBuilder sb = new StringBuilder();
-        sb.append('│');
-        for (int j = 0; j < n; j++) {
-            int v = g[i][j];
-            String content = (v == 0) ? "." : String.valueOf(v);
-            sb.append(' ')
-                    .append(padLeft(content, width))
-                    .append(' ')
-                    .append('│');
+        sb.append('+');
+        for (int i = 0; i < n; i++) {
+            sb.append("-".repeat(cellW)).append('+');
         }
         return sb.toString();
     }

@@ -18,7 +18,6 @@ public final class ExperimentRunner {
 
     // ---- aggregated search stats from the last run() ----
     private boolean lastHasSearchStats = false;
-    private long lastTotalNodes = 0;
     private long lastTotalEvalCalls = 0;
     private long lastTotalChanceNodes = 0;
     private long lastTotalChanceOutcomes = 0;
@@ -36,11 +35,15 @@ public final class ExperimentRunner {
         this.player = player;
     }
 
+    /* =========================
+       Batch mode
+       ========================= */
+
     public List<SessionResult> run() {
         List<SessionResult> results = new ArrayList<>(runs);
 
         lastHasSearchStats = (player instanceof ExpectimaxPlayer);
-        lastTotalNodes = 0;
+        long lastTotalNodes = 0;
         lastTotalEvalCalls = 0;
         lastTotalChanceNodes = 0;
         lastTotalChanceOutcomes = 0;
@@ -50,13 +53,14 @@ public final class ExperimentRunner {
             e.resetStats();
         }
 
+        int progressStep = Math.max(1, runs / 10); // 10 progress updates
+
         for (int i = 0; i < runs; i++) {
             long seed = baseSeed + i;
 
             GameSession session = new GameSession(config, seed);
             results.add(session.runGame(player));
 
-            // pull per-game stats from expectimax and aggregate
             if (player instanceof ExpectimaxPlayer e) {
                 ExpectimaxPlayer.SearchStats s = e.getStats();
 
@@ -70,9 +74,10 @@ public final class ExperimentRunner {
             }
 
             int count = i + 1;
-            if (count % 5 == 0) {
-                System.out.println("Run " + count + " of " + runs + " is complete");
 
+            if (count % progressStep == 0 || count == runs) {
+                int percent = (int) ((100.0 * count) / runs);
+                System.out.println("Progress: " + percent + "% (" + count + " / " + runs + ")");
                 if (lastHasSearchStats) {
                     double sec = lastTotalSearchNanos / 1_000_000_000.0;
                     double nps = sec > 0 ? lastTotalNodes / sec : 0.0;
@@ -80,13 +85,44 @@ public final class ExperimentRunner {
                             ? lastTotalChanceOutcomes / (double) lastTotalChanceNodes
                             : 0.0;
 
-                    System.out.printf("  Search so far: nodes/sec=%.0f, avgOutcomes=%.2f%n", nps, avgOutcomes);
+                    System.out.printf("  Search so far: nodes/sec=%.0f, avgOutcomes=%.2f%n",
+                            nps, avgOutcomes);
                 }
             }
         }
 
         return results;
     }
+
+    /* =========================
+       Interactive mode
+       ========================= */
+
+    public void runInteractiveOnce() {
+        System.out.println();
+        System.out.println("=== Interactive Run ===");
+
+        GameSession session = new GameSession(config, baseSeed);
+        SessionResult result = session.runGameInteractive(player);
+
+        System.out.println();
+        System.out.println("=== Final Result ===");
+        System.out.println("Score     : " + result.finalScore());
+        System.out.println("Steps     : " + result.steps());
+        System.out.println("Max tile  : " + result.maxTile());
+        System.out.println("Reached 2048: " + result.reached2048());
+        System.out.printf("Wall time : %.3f s%n",
+                result.wallTimeNanos() / 1_000_000_000.0);
+
+        if (result.cpuTimeNanos() >= 0) {
+            System.out.printf("CPU time  : %.3f s%n",
+                    result.cpuTimeNanos() / 1_000_000_000.0);
+        }
+    }
+
+    /* =========================
+       Report (batch only)
+       ========================= */
 
     public void report(List<SessionResult> results) {
         String playerType = player.getClass().getSimpleName();
@@ -149,40 +185,15 @@ public final class ExperimentRunner {
         System.out.println();
         System.out.println("Timing (seconds)");
         System.out.printf("  Total wall time : %.3f s%n", totalWallSec);
-        System.out.printf("  Avg wall per run  : %.6f s%n", avgWallSec);
+        System.out.printf("  Avg wall per run: %.6f s%n", avgWallSec);
 
         if (cpuAvailableForAll) {
             double totalCpuSec = totalCpuNanos / 1_000_000_000.0;
             double avgCpuSec = totalCpuSec / n;
             System.out.printf("  Total CPU time  : %.3f s%n", totalCpuSec);
-            System.out.printf("  Avg CPU per run   : %.6f s%n", avgCpuSec);
+            System.out.printf("  Avg CPU per run : %.6f s%n", avgCpuSec);
         } else {
             System.out.println("  CPU time        : unavailable");
-        }
-
-        if (lastHasSearchStats) {
-            double searchSec = lastTotalSearchNanos / 1_000_000_000.0;
-            double nodesPerSec = searchSec > 0 ? lastTotalNodes / searchSec : 0.0;
-            double avgOutcomes = lastTotalChanceNodes > 0
-                    ? lastTotalChanceOutcomes / (double) lastTotalChanceNodes
-                    : 0.0;
-
-            double avgNodesPerMove = totalSteps > 0
-                    ? lastTotalNodes / (double) totalSteps
-                    : 0.0;
-
-            double avgMsPerMove = totalSteps > 0
-                    ? (lastTotalSearchNanos / 1_000_000.0) / totalSteps
-                    : 0.0;
-
-            System.out.println();
-            System.out.println("Search");
-            System.out.printf("  Total search time   : %.3f s%n", searchSec);
-            System.out.printf("  Nodes/sec           : %.0f%n", nodesPerSec);
-            System.out.printf("  Avg nodes per move  : %.0f%n", avgNodesPerMove);
-            System.out.printf("  Avg ms per move     : %.3f ms%n", avgMsPerMove);
-            System.out.printf("  Avg outcomes/chance : %.2f%n", avgOutcomes);
-            System.out.printf("  Eval calls          : %d%n", lastTotalEvalCalls);
         }
     }
 }
