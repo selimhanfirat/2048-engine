@@ -38,9 +38,18 @@ bin/
 ### VS Code ###
 .vscode/
 
+# generic "run" / tool output
+.run/
+**/.run/
+
 ### OS ###
 .DS_Store
+
+.jqwik/
+**/.jqwik/
+
 
 replays/
 *.json
 
+.run/
