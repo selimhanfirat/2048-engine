@@ -10,7 +10,6 @@ public record SessionResult(
         int steps,
         int maxTile,
         boolean reached2048,
-        Map<Move, Integer> moveCounts,
         long wallTimeNanos,
         long cpuTimeNanos
 ) {}

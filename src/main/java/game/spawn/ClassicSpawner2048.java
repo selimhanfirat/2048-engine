@@ -1,7 +1,6 @@
 package game.spawn;
 
 import game.core.Board;
-import game.util.Coordinate;
 import game.util.Rng;
 
 import java.util.ArrayList;
@@ -18,6 +17,10 @@ public class ClassicSpawner2048 implements Spawner {
         this.p2 = p2;
     }
 
+    public double getP2() {
+        return p2;
+    }
+
     @Override
     public SpawnDistribution distribution(Board board) {
         int[] emptyCells = board.getEmptyCells();
@@ -30,21 +33,17 @@ public class ClassicSpawner2048 implements Spawner {
         List<SpawnDistribution.Outcome> outcomes = new ArrayList<>(2 * n);
         double pCell = 1.0 / n;
 
-        int dim = board.getDimension();
+        double p4 = 1.0 - p2;
 
         for (int cell : emptyCells) {
-            int row = cell / dim;
-            int col = cell % dim;
-            Coordinate c = new Coordinate(row, col);
-
             outcomes.add(new SpawnDistribution.Outcome(
-                    board.placeTile(c, 2),
+                    board.placeTile(cell, 2),
                     pCell * p2
             ));
 
             outcomes.add(new SpawnDistribution.Outcome(
-                    board.placeTile(c, 4),
-                    pCell * (1.0 - p2)
+                    board.placeTile(cell, 4),
+                    pCell * p4
             ));
         }
 
@@ -61,11 +60,8 @@ public class ClassicSpawner2048 implements Spawner {
         }
 
         int cell = emptyCells[rng.nextInt(n)];
-        int dim = board.getDimension();
-        int row = cell / dim;
-        int col = cell % dim;
-
         int value = (rng.nextDouble() < p2) ? 2 : 4;
-        return board.placeTile(new Coordinate(row, col), value);
+
+        return board.placeTile(cell, value);
     }
 }

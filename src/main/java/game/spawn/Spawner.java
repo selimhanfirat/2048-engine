@@ -6,4 +6,5 @@ import game.util.Rng;
 public interface Spawner {
     SpawnDistribution distribution(Board board); // for AI/search
     Board sample(Board board, Rng rng);          // runtime only
+    double getP2();
 }

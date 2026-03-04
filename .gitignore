@@ -40,9 +40,22 @@ bin/
 ### VS Code ###
 .vscode/
 
+# generic "run" / tool output
+.run/
+**/.run/
+
 ### OS ###
 .DS_Store
+
+## Jqwik junk
+.jqwik-database/
+**/.jqwik-database/
+.jqwik/
+**/.jqwik/
 
 replays/
 *.json
 
+reports/
+
+.run/
