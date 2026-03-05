@@ -10,27 +10,26 @@ import game.spawn.Spawner;
 
 public class ExpectimaxPlayer implements Player {
 
-    private final Evaluator eval;
-    private final Rules rules;
-    private final Spawner spawner;
+    protected final Evaluator eval;
+    protected final Rules rules;
+    protected final Spawner spawner;
 
     private static final int CACHE_SIZE = 200_000;
 
-    private final BoardLRUCache<CacheKey, Double> tt;
-    private final int depth;
-    private final boolean useCache;
+    protected final BoardLRUCache<CacheKey, Double> tt;
+    protected final int depth;
+    protected final boolean useCache;
 
-    // Key must include depth + turn
-    private record CacheKey(Board board, int pliesLeft, boolean playerTurn) {}
+    protected record CacheKey(Board board, int pliesLeft, boolean playerTurn) {}
 
-    // ---- instrumentation ----
-    private long nodes;
-    private long evalCalls;
-    private long chanceNodes;
-    private long chanceOutcomes;
-    private long searchNanos;
-    private long cacheHits;
-    private long cacheMisses;
+    // instrumentation
+    protected long nodes;
+    protected long evalCalls;
+    protected long chanceNodes;
+    protected long chanceOutcomes;
+    protected long searchNanos;
+    protected long cacheHits;
+    protected long cacheMisses;
 
     public record SearchStats(
             long nodes,
@@ -57,7 +56,6 @@ public class ExpectimaxPlayer implements Player {
                 searchNanos, cacheHits, cacheMisses);
     }
 
-    // ---- Constructor WITH cache control ----
     public ExpectimaxPlayer(GameConfig config, Evaluator eval, int depth, boolean useCache) {
         this.eval = eval;
         this.rules = config.rules();
@@ -67,7 +65,6 @@ public class ExpectimaxPlayer implements Player {
         this.tt = useCache ? new BoardLRUCache<>(CACHE_SIZE) : null;
     }
 
-    // ---- Optional convenience constructor (cache ON by default) ----
     public ExpectimaxPlayer(GameConfig config, Evaluator eval, int depth) {
         this(config, eval, depth, true);
     }
@@ -100,7 +97,7 @@ public class ExpectimaxPlayer implements Player {
         return bestMove;
     }
 
-    private double value(Board board, int pliesLeft, boolean playerTurn) {
+    protected double value(Board board, int pliesLeft, boolean playerTurn) {
         nodes++;
 
         if (pliesLeft == 0) {
@@ -108,22 +105,24 @@ public class ExpectimaxPlayer implements Player {
             return eval.evaluate(board);
         }
 
-        CacheKey key = null;
-
-        if (useCache) {
-            key = new CacheKey(board, pliesLeft, playerTurn);
-            Double cached = tt.get(key);
-            if (cached != null) {
-                cacheHits++;
-                return cached;
-            }
-            cacheMisses++;
-        }
-
-        final double result;
-
+        // Cache policy is allowed to depend on the node type/state,
+        // so we check caching after we know what node we are in.
         if (playerTurn) {
+            CacheKey key = null;
+
+            if (useCache && shouldCache(board, pliesLeft, true)) {
+                key = new CacheKey(board, pliesLeft, true);
+                Double cached = tt.get(key);
+                if (cached != null) {
+                    cacheHits++;
+                    return cached;
+                }
+                cacheMisses++;
+            }
+
             var moves = rules.getLegalMoves(board);
+            final double result;
+
             if (moves.isEmpty()) {
                 evalCalls++;
                 result = Double.NEGATIVE_INFINITY;
@@ -135,32 +134,62 @@ public class ExpectimaxPlayer implements Player {
                 }
                 result = best;
             }
-        } else {
-            chanceNodes++;
 
-            int[] empties = board.getEmptyCells();
-            chanceOutcomes += (long) empties.length * 2;
+            if (useCache && key != null) tt.put(key, result);
+            return result;
+        }
 
-            if (empties.length == 0) {
-                result = value(board, pliesLeft - 1, true);
-            } else {
-                double pCell = 1.0 / empties.length;
-                double p2 = spawner.getP2();
-                double p4 = 1.0 - p2;
+        // Chance node
+        chanceNodes++;
 
-                double expected = 0.0;
-                for (int cell : empties) {
-                    expected += pCell * p2 * value(board.placeTile(cell, 2), pliesLeft - 1, true);
-                    expected += pCell * p4 * value(board.placeTile(cell, 4), pliesLeft - 1, true);
-                }
-                result = expected;
+        int[] empties = board.getEmptyCells();
+        if (empties.length == 0) {
+            return value(board, pliesLeft - 1, true);
+        }
+
+        CacheKey key = null;
+        boolean cacheThisChance = useCache && shouldCacheChance(board, pliesLeft, empties);
+
+        if (cacheThisChance) {
+            key = new CacheKey(board, pliesLeft, false);
+            Double cached = tt.get(key);
+            if (cached != null) {
+                cacheHits++;
+                return cached;
             }
+            cacheMisses++;
         }
 
-        if (useCache) {
-            tt.put(key, result);
-        }
+        double result = chanceValue(board, pliesLeft, empties);
 
+        if (cacheThisChance) tt.put(key, result);
         return result;
+    }
+
+    /** Hook: subclasses can decide whether a node is cached at all. */
+    protected boolean shouldCache(Board board, int pliesLeft, boolean playerTurn) {
+        return true;
+    }
+
+    /** Hook: subclasses can decide whether a chance node is cached, given empties. */
+    protected boolean shouldCacheChance(Board board, int pliesLeft, int[] empties) {
+        return true;
+    }
+
+    /** Hook: compute expected value at a chance node. Default = full (2 and 4) expansion. */
+    protected double chanceValue(Board board, int pliesLeft, int[] empties) {
+        // instrumentation for full expansion
+        chanceOutcomes += (long) empties.length * 2;
+
+        double pCell = 1.0 / empties.length;
+        double p2 = spawner.getP2();
+        double p4 = 1.0 - p2;
+
+        double expected = 0.0;
+        for (int cell : empties) {
+            expected += pCell * p2 * value(board.placeTile(cell, 2), pliesLeft - 1, true);
+            expected += pCell * p4 * value(board.placeTile(cell, 4), pliesLeft - 1, true);
+        }
+        return expected;
     }
 }
