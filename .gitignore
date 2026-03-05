@@ -7,7 +7,6 @@ pom.xml.next
 release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
-.mvn/timing.properties
 
 ### IntelliJ IDEA ###
 .idea/
@@ -15,8 +14,8 @@ buildNumber.properties
 .run/
 
 out/
-!**/src/main/**/out/
-!**/src/test/**/out/
+!.**/src/main/**/out/
+!.**/src/test/**/out/
 
 ### Eclipse ###
 .apt_generated
@@ -27,8 +26,8 @@ out/
 .springBeans
 .sts4-cache
 bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
+!.**/src/main/**/bin/
+!.**/src/test/**/bin/
 
 ### NetBeans ###
 /nbproject/private/
@@ -47,15 +46,9 @@ bin/
 ### OS ###
 .DS_Store
 
-## Jqwik junk
+### jqwik ###
 .jqwik-database/
 **/.jqwik-database/
-.jqwik/
-**/.jqwik/
 
-replays/
-*.json
-
+# experiment outputs
 reports/
-
-.run/
