@@ -2,6 +2,7 @@ package app;
 
 import ai.ExpectimaxPlayer;
 import ai.Player;
+import ai.SamplingExpectimaxPlayer;
 import ai.eval.ClassicEvaluator;
 import ai.eval.Evaluator;
 import app.output.ConsoleSink;
@@ -16,10 +17,10 @@ import game.rules.Rules;
 import game.runtime.GameConfig;
 import game.spawn.ClassicSpawner2048;
 import game.spawn.Spawner;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,18 +28,19 @@ public class Main {
 
     public static void main(String[] args) {
 
-        // ---- defaults (same spirit as before) ----
-        String aiArg = "default";    // can be CSV list
-        String depthArg = "3";       // can be CSV list
-        String cacheArg = "true";    // can be CSV list
+        // defaults
+        String aiArg = "default";
+        String depthArg = "3";
+        String cacheArg = "true";
 
         int runs = 250;
         long seed = 42L;
 
         int checkpoints = 10;
-        double warmupFraction = 0.08; // 8% (in your 5-10% range)
+        double warmupFraction = 0.02; // 2%
+        int ignore4Threshold = 6;
 
-        // ---- parse flags ----
+        // parse flags
         for (int i = 0; i < args.length; i++) {
             String a = args[i];
 
@@ -55,11 +57,13 @@ public class Main {
                 case "--checkpoints" -> checkpoints = parseNonNegativeInt(requireValue(args, ++i, "--checkpoints"), "checkpoints");
                 case "--warmup" -> warmupFraction = parseWarmup(requireValue(args, ++i, "--warmup"));
 
+                case "--ignore4" -> ignore4Threshold = parseNonNegativeInt(requireValue(args, ++i, "--ignore4"), "ignore4");
+
                 default -> throw new IllegalArgumentException("Unknown argument: " + a);
             }
         }
 
-        // ---- game config ----
+        // game config
         int gridSize = 4;
         double p2 = 0.9;
 
@@ -67,25 +71,27 @@ public class Main {
         Spawner spawner = new ClassicSpawner2048(p2);
         GameConfig config = new GameConfig(gridSize, rules, spawner);
 
-        // ---- parse list args (single value or CSV) ----
+        // parse list args (single value or CSV)
         List<String> ais = parseCsvStrings(aiArg);
         List<Integer> depths = parseCsvPositiveInts(depthArg, "depth");
         List<Boolean> caches = parseCsvBooleans(cacheArg, "cache");
 
-        // ---- build cartesian product ----
+        // build cartesian product
         List<ExperimentCase> experiments = new ArrayList<>();
         for (String ai : ais) {
             for (int d : depths) {
                 for (boolean c : caches) {
-                    Player player = getPlayer(ai, config, d, c);
+
+                    Player player = getPlayer(ai, config, d, c, ignore4Threshold);
                     ExperimentSpec spec = new ExperimentSpec(d, c);
-                    String label = ai + " d=" + d + " cache=" + (c ? "on" : "off");
+
+                    String label = buildLabel(ai, d, c, ignore4Threshold);
                     experiments.add(new ExperimentCase(label, spec, player));
                 }
             }
         }
 
-        // ---- print config summary ----
+        // print config summary
         System.out.println("=== Configuration ===");
         System.out.println("Runs         : " + runs);
         System.out.println("Seed         : " + seed);
@@ -97,9 +103,10 @@ public class Main {
         System.out.println("AI(s)        : " + ais);
         System.out.println("Depth(s)     : " + depths);
         System.out.println("Cache mode(s): " + caches);
+        System.out.println("Ignore4 thr  : " + ignore4Threshold);
         System.out.println("=====================");
 
-        // ---- run ----
+        // run
         RunPlan plan = new RunPlan(runs, seed, warmupFraction, checkpoints);
         ExperimentRunner runner = new ExperimentRunner(config);
         String reportPath = buildMarkdownReportPath(aiArg, depthArg, cacheArg, runs, seed, warmupFraction, checkpoints);
@@ -112,17 +119,31 @@ public class Main {
         runner.runExperiment(experiments, plan, sinks);
     }
 
-    private static Player getPlayer(String aiType, GameConfig config, int depth, boolean useCache) {
+    private static String buildLabel(String aiType, int depth, boolean useCache, int ignore4Threshold) {
+        String base = aiType + " d=" + depth + " cache=" + (useCache ? "on" : "off");
+        if (aiType.equals("sample") || aiType.equals("sampling") || aiType.equals("ignore4")) {
+            return base + " ignore4>" + ignore4Threshold;
+        }
+        return base;
+    }
+
+    private static Player getPlayer(String aiType, GameConfig config, int depth, boolean useCache, int ignore4Threshold) {
         Evaluator evaluator = new ClassicEvaluator();
 
         return switch (aiType) {
             case "default" -> new ExpectimaxPlayer(config, evaluator, depth, useCache);
-            default -> throw new IllegalArgumentException("Unknown AI type: " + aiType + " (expected: default)");
+
+            // sampling / ignore-4-when-many-empties variant
+            case "sample", "sampling", "ignore4" ->
+                    new SamplingExpectimaxPlayer(config, evaluator, depth, useCache, ignore4Threshold);
+
+            default -> throw new IllegalArgumentException(
+                    "Unknown AI type: " + aiType + " (expected: default, sample)"
+            );
         };
     }
 
-    // ---------- parsing helpers ----------
-
+    // parsing helpers
     private static List<String> parseCsvStrings(String s) {
         if (s == null || s.isBlank()) return List.of();
         String[] parts = s.split(",");
@@ -159,7 +180,7 @@ public class Main {
         };
     }
 
-    // warmup accepts "0.08" or "8%" (clamped to [0, 0.95] just to prevent nonsense)
+    // warmup accepts "0.08" or "8%" (clamped to [0, 0.95] just to prevent problems)
     private static double parseWarmup(String s) {
         String x = s.trim().toLowerCase();
         double v;
@@ -168,7 +189,7 @@ public class Main {
             v = Double.parseDouble(num) / 100.0;
         } else {
             v = Double.parseDouble(x);
-            if (v > 1.0) v = v / 100.0; // allow "8" meaning 8%
+            if (v > 1.0) v = v / 100.0; // allow "n" meaning n%
         }
         if (v < 0.0) v = 0.0;
         if (v > 0.95) v = 0.95;
@@ -256,9 +277,10 @@ public class Main {
 
     private static void usageAndExit() {
         System.out.println("Usage (all optional; CSV supported for ai/depth/cache):");
-        System.out.println("  --ai default,otherAI        (default: default)");
+        System.out.println("  --ai default,sample         (default: default)");
         System.out.println("  --depth 2,3,4               (default: 3)");
         System.out.println("  --cache true,false          (default: true)");
+        System.out.println("  --ignore4 <n>               (default: 6)  // used by sample AI");
         System.out.println("  --runs <n>                  (default: 250)");
         System.out.println("  --seed <n>                  (default: 42)");
         System.out.println("  --checkpoints <n>           (default: 10)");

@@ -33,7 +33,7 @@ public class ExperimentRunner {
         long totalCpuNanos = 0;
         boolean cpuAvailableForAll = true;
 
-        // optional search stats (Expectimax only)
+        // optional search stats
         boolean hasSearchStats = false;
         long totalNodes = 0;
         long totalChanceNodes = 0;
@@ -140,7 +140,9 @@ public class ExperimentRunner {
                 new GameSession(config, seed).runGame(e.player());
                 if (e.player() instanceof ExpectimaxPlayer ep) ep.resetStats();
             }
+            System.out.printf("\rwarmup %d is complete", i + 1);
         }
+        System.out.println();
 
         int checkpointEvery = plan.checkpointEvery();
 
