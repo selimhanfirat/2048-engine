@@ -49,10 +49,6 @@ public final class Board {
         this.cells = trustedCells;
     }
 
-    /* =========================
-       Basic accessors
-       ========================= */
-
     public int getDimension() {
         return n;
     }
@@ -103,9 +99,6 @@ public final class Board {
         return Board.wrapTrustedCells(n, copy);
     }
 
-    /* =========================
-       equals / hashCode
-       ========================= */
 
     @Override
     public boolean equals(Object other) {

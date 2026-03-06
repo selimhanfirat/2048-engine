@@ -1,4 +1,4 @@
-package app.experiment;
+package app;
 
 import ai.ExpectimaxPlayer;
 import app.dto.*;

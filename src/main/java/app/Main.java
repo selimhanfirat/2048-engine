@@ -8,7 +8,6 @@ import ai.eval.Evaluator;
 import app.dto.ExperimentCase;
 import app.dto.ExperimentSpec;
 import app.dto.RunPlan;
-import app.experiment.ExperimentRunner;
 import app.output.ConsoleSink;
 import app.output.MarkdownFileSink;
 import app.output.OutputSink;
