@@ -1,20 +1,15 @@
 package game.runtime;
 
-import ai.Player;
 import ai.ExpectimaxPlayer;
+import ai.Player;
 import game.core.Board;
 import game.core.Move;
 import game.core.MoveResult;
-import ui.BoardRenderer;
 import game.util.Rng;
+import ui.BoardRenderer;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
-import java.util.HashMap;
-import java.util.Map;
 
 public final class GameSession {
 
@@ -43,10 +38,6 @@ public final class GameSession {
         this.state = new Board(config.gridSize());
         this.score = 0;
     }
-
-    /* =========================
-       Normal batch run (unchanged)
-       ========================= */
 
     public SessionResult runGame(Player player) {
         final long wallStart = System.nanoTime();
@@ -88,11 +79,7 @@ public final class GameSession {
         );
     }
 
-    /* =========================
-       Interactive mode
-       ========================= */
-
-    public SessionResult runGameInteractive(Player player) {
+    public SessionResult runGameInteractive(Player player, boolean stepMode, int delayMs, int depth) {
 
         final long wallStart = System.nanoTime();
         final long cpuStart = (CPU_TIME_SUPPORTED && THREAD_MX_BEAN.isThreadCpuTimeEnabled())
@@ -105,89 +92,129 @@ public final class GameSession {
         initialize();
         maxTile = state.getMaxTile();
 
-        BufferedReader in =
-                new BufferedReader(new InputStreamReader(System.in));
+        org.jline.terminal.Terminal terminal;
+        try {
+            terminal = org.jline.terminal.TerminalBuilder.builder()
+                    .system(true)
+                    .jna(false)
+                    .jansi(true)
+                    .build();
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to create terminal", e);
+        }
 
-        System.out.println("Interactive mode");
-        System.out.println("Seed: " + seed);
-        System.out.println("Press ENTER for next move, 'q' + ENTER to quit.\n");
+        org.jline.terminal.Attributes saved = terminal.getAttributes();
 
-        System.out.println("Initial board:");
-        System.out.print(BoardRenderer.render(state));
-
-        while (!isGameOver()) {
-
-            System.out.print("> ");
-            String line;
+        Thread shutdownHook = new Thread(() -> {
+            try { terminal.setAttributes(saved); } catch (Exception ignored) {}
             try {
-                line = in.readLine();
-            } catch (IOException e) {
-                break;
-            }
+                terminal.puts(org.jline.utils.InfoCmp.Capability.cursor_visible);
+                terminal.puts(org.jline.utils.InfoCmp.Capability.exit_ca_mode);
+                terminal.puts(org.jline.utils.InfoCmp.Capability.keypad_local);
+                terminal.flush();
+            } catch (Exception ignored) {}
+            try { terminal.close(); } catch (Exception ignored) {}
+        });
 
-            if (line != null && line.trim().equalsIgnoreCase("q")) {
-                break;
-            }
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
 
-            // ---- measure AI decision time ----
-            long decisionStart = System.nanoTime();
-            Move move = player.chooseMove(state);
-            long decisionEnd = System.nanoTime();
-            double decisionMs =
-                    (decisionEnd - decisionStart) / 1_000_000.0;
+        try {
+            terminal.enterRawMode();
+            terminal.puts(org.jline.utils.InfoCmp.Capability.enter_ca_mode);
+            terminal.puts(org.jline.utils.InfoCmp.Capability.cursor_invisible);
+            terminal.flush();
 
-            if (move == null) {
-                System.out.println("AI returned null move. Stopping.");
-                break;
-            }
+            String modeLine = stepMode
+                    ? "Mode: STEP  (SPACE/ENTER = next, q = quit)"
+                    : ("Mode: AUTO  (minimum delay " + delayMs + " ms)");
 
+            String headerBase = "2048 AI  |  Seed: " + seed + "  |  Depth: " + depth;
 
-            MoveResult result =
-                    config.rules().makeMove(state, move);
+            BoardRenderer.render(terminal, state, headerBase, modeLine);
 
-            boolean changed =
-                    !result.board().equals(state);
+            while (!isGameOver()) {
 
-            state = result.board();
-            score += result.scoreGained();
+                if (stepMode) {
+                    int ch = readKeyBlocking(terminal);
+                    if (ch == 'q' || ch == 'Q') break;
+                    if (!(ch == ' ' || ch == '\r' || ch == '\n')) continue;
+                } else {
+                    if (delayMs > 0) {
+                        try {
+                            Thread.sleep(delayMs);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                    }
+                    if (terminal.reader().ready()) {
+                        int ch = terminal.reader().read();
+                        if (ch == 'q' || ch == 'Q') break;
+                    }
+                }
 
-            if (changed) {
-                state = config.spawner().sample(state, rng);
-            }
+                long decisionStart = System.nanoTime();
+                Move move = player.chooseMove(state);
+                long decisionEnd = System.nanoTime();
+                double decisionMs = (decisionEnd - decisionStart) / 1_000_000.0;
 
-            steps++;
-            maxTile = Math.max(maxTile, state.getMaxTile());
+                if (move == null) break;
 
-            System.out.printf(
-                    "Step %d | Move: %s | +%d | Score: %d | Max: %d | AI time: %.3f ms%n",
-                    steps,
-                    move,
-                    result.scoreGained(),
-                    score,
-                    maxTile,
-                    decisionMs
-            );
+                MoveResult result = config.rules().makeMove(state, move);
+                boolean changed = !result.board().equals(state);
 
-            // Optional: print search stats if Expectimax
-            if (player instanceof ExpectimaxPlayer ep) {
-                var stats = ep.getStats();
+                state = result.board();
+                score += result.scoreGained();
 
-                double hitRate = (stats.cacheHits() + stats.cacheMisses()) == 0
-                        ? 0.0
-                        : 100.0 * stats.cacheHits()
-                        / (stats.cacheHits() + stats.cacheMisses());
+                if (changed) {
+                    state = config.spawner().sample(state, rng);
+                }
 
-                System.out.printf(
-                        "   Nodes: %d | Eval: %d | Cache hit: %.1f%%%n",
-                        stats.nodes(),
-                        stats.evalCalls(),
-                        hitRate
+                steps++;
+                maxTile = Math.max(maxTile, state.getMaxTile());
+
+                String stats1 = String.format(
+                        "Step %d | Move %s | +%d | Score %d | Max %d | AI %.3f ms",
+                        steps, moveSymbol(move), result.scoreGained(), score, maxTile, decisionMs
                 );
 
-                ep.resetStats();
+                String stats2 = "";
+                if (player instanceof ExpectimaxPlayer ep) {
+                    var st = ep.getStats();
+                    double hitRate = (st.cacheHits() + st.cacheMisses()) == 0
+                            ? 0.0
+                            : 100.0 * st.cacheHits() / (st.cacheHits() + st.cacheMisses());
+
+                    stats2 = String.format("Nodes %d | Eval %d | Cache hit %.1f%%",
+                            st.nodes(), st.evalCalls(), hitRate);
+
+                    ep.resetStats();
+                }
+
+                String headerNow = headerBase + "  |  " + stats1;
+                String footerNow = modeLine + (stats2.isBlank() ? "" : ("  |  " + stats2));
+
+                BoardRenderer.render(terminal, state, headerNow, footerNow);
             }
 
-            System.out.print(BoardRenderer.render(state));
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        } finally {
+            try {
+                Runtime.getRuntime().removeShutdownHook(shutdownHook);
+            } catch (IllegalStateException ignored) {}
+
+            try { terminal.setAttributes(saved); } catch (Exception ignored) {}
+
+            try {
+                terminal.puts(org.jline.utils.InfoCmp.Capability.cursor_visible);
+                terminal.puts(org.jline.utils.InfoCmp.Capability.exit_ca_mode);
+                terminal.puts(org.jline.utils.InfoCmp.Capability.keypad_local);
+                terminal.flush();
+            } catch (Exception ignored) {}
+
+            try { terminal.close(); } catch (Exception ignored) {}
+            System.out.println();
         }
 
         final long wallEnd = System.nanoTime();
@@ -196,8 +223,7 @@ public final class GameSession {
                 : -1L;
 
         final long wallNanos = wallEnd - wallStart;
-        final long cpuNanos =
-                (cpuStart != -1L) ? (cpuEnd - cpuStart) : -1L;
+        final long cpuNanos = (cpuStart != -1L) ? (cpuEnd - cpuStart) : -1L;
 
         return new SessionResult(
                 seed,
@@ -210,6 +236,26 @@ public final class GameSession {
         );
     }
 
+    private static int readKeyBlocking(org.jline.terminal.Terminal terminal) throws java.io.IOException {
+        while (true) {
+            int ch = terminal.reader().read();
+            if (ch != -1) return ch;
+        }
+    }
+
+    private static String moveSymbol(Move move) {
+        if (move == null) {
+            return "?";
+        }
+
+        return switch (move) {
+            case LEFT -> "←";
+            case RIGHT -> "→";
+            case UP -> "↑";
+            case DOWN -> "↓";
+        };
+    }
+
     private void initialize() {
         state = config.spawner().sample(state, rng);
         state = config.spawner().sample(state, rng);
@@ -220,8 +266,7 @@ public final class GameSession {
     }
 
     private void step(Move move) {
-        MoveResult result =
-                config.rules().makeMove(state, move);
+        MoveResult result = config.rules().makeMove(state, move);
         state = result.board();
         score += result.scoreGained();
         state = config.spawner().sample(state, rng);
