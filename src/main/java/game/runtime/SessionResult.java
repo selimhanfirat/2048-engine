@@ -1,9 +1,5 @@
 package game.runtime;
 
-import game.core.Move;
-
-import java.util.Map;
-
 public record SessionResult(
         long seed,
         int finalScore,

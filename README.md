@@ -148,16 +148,6 @@ This command will:
 
 ---
 
-### Run the CLI
-
-After building, start the command line interface:
-
-```bash
-./mvnw exec:java
-```
-
----
-
 ### Command Line Interface
 
 The project includes a command line interface for running simulations and experiments.
